@@ -4,7 +4,6 @@ const models = require('../models');
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-  models.
   res.render('index', { title: 'Express' });
 });
 
