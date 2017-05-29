@@ -3,8 +3,8 @@
  */
 module.exports = (sequelize, DataTypes) => {
     const verifications_tb = sequelize.define('VERIFICATIONS_TB', {
-        verification_idx: {type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true},
-        email_address: {type: DataTypes.STRING, allowNull: false, isEmail: true},
+        verificationIdx: {type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true},
+        emailAddress: {type: DataTypes.STRING, allowNull: false, isEmail: true},
         code: {type: DataTypes.INTEGER, allowNull: false}
     }, {timestamps: false, tableName: 'VERIFICATIONS_TB', comment: '유저의 이메일 인증 번호 관리 테이블'});
     return verifications_tb;
