@@ -1,6 +1,6 @@
 /**
  * STARS_TB 평가 기록 테이블
-*/
+ */
 module.exports = (sequelize, DataTypes) => {
     const stars_tb = sequelize.define('STARS_TB', {
         star_idx: {type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true},
