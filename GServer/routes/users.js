@@ -8,7 +8,7 @@ const emailConfig = require('../config/config.json')['nodemailer'];
 
 
 router.route('/verify').post(verify);
-
+router.route('/validNickname').post(validNickname);
 
 async function verify(req, res, next) {
     try {
@@ -25,6 +25,25 @@ async function verify(req, res, next) {
         const ret = await addCode(emailAddr, code);
         resSucc(res, ret);
 
+    } catch (err) {
+        next(err);
+    }
+}
+
+async function validNickname(req, res, next) {
+    try {
+        const condtions = {
+            where: {
+                userNickname: req.body.userNickname
+            },
+            attributes: ['userIdx']
+        };
+        const data = await Users.findOne(condtions);
+        if (!data) {
+            resSucc(res, null);
+        } else {
+            throw new Error("Nickname Already Exist");
+        }
     } catch (err) {
         next(err);
     }
