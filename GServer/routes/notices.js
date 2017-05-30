@@ -37,7 +37,7 @@ async function showNoticeList(req, res, next){
 
     try{
         let result = await getList(startIdx, endIdx);
-        res.send({msg:'success', total: result.length, index: {start:startIdx, end:endIdx}, data : result});
+        resSucc(res, result);
     } catch(err){
         next(err);
     }
@@ -47,7 +47,7 @@ async function showNoticeList(req, res, next){
 async function showNoticeDetail(req, res, next){
     try{
         let result = await getDetail(req.params.noticeIdx);
-        res.send({msg:'success', data : result});
+        resSucc(res, result);
     } catch(err){
         next(err);
     }

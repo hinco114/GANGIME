@@ -6,7 +6,8 @@ const resSucc = (res, data) => {
     };
     if (Array.isArray(data)) {
         resultModel.total = data.length;
-        const idxName = Object.keys(data[0])[0];
+        // const idxName = Object.keys(data[0])[0];
+        const idxName = Object.keys(data[0].dataValues)[0];
         resultModel.index = {
             start: data[0][idxName],
             end: data[data.length - 1][idxName]
