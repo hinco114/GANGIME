@@ -5,7 +5,7 @@ module.exports = (sequelize, DataTypes) => {
     const errands_tb = sequelize.define('ERRANDS_TB', {
         errandIdx: {type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true},
         requesterIdx: {type: DataTypes.INTEGER, allowNull: false, references: {model: 'USERS_TB', key: 'userIdx'}},
-        executorIdx: {type: DataTypes.INTEGER, references: {model: 'USERS_TB', key: 'user_idx'}},
+        executorIdx: {type: DataTypes.INTEGER, references: {model: 'USERS_TB', key: 'userIdx'}},
         errandTitle: {type: DataTypes.STRING, allowNull: false},
         errandContent: {type: DataTypes.TEXT, allowNull: false},
         startStationIdx: {type: DataTypes.INTEGER, allowNull: false, references: {model: 'STATIONS_TB', key: 'stationIdx'}},
