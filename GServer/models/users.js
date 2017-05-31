@@ -7,7 +7,7 @@ module.exports = (sequelize, DataTypes) => {
         userEmail: {type: DataTypes.STRING(100), allowNull: false, unique: true, isEmail: true},
         userPassword: {type: DataTypes.STRING, allowNull: false},
         userNickname: {type: DataTypes.STRING(10), allowNull: false, unique: true},
-        userBirthday: {type: DataTypes.DATE, allowNull: false},
+        userBirthday: {type: DataTypes.DATEONLY, allowNull: false},
         userPhone: {type: DataTypes.STRING(15), allowNull: false, unique: true},
         userAccount: {type: DataTypes.STRING(30), unique: true},
         userBankIdx: {type: DataTypes.INTEGER, references: {model: 'BANKS_TB', key: 'bankIdx'}},
@@ -16,7 +16,6 @@ module.exports = (sequelize, DataTypes) => {
         profilePicture: {type: DataTypes.STRING, isUrl: true},
         profileThumbnail: {type: DataTypes.STRING, isUrl: true},
         fcmToken: {type: DataTypes.STRING},
-        salt: {type: DataTypes.STRING, allowNull: false}
     }, {tableName: 'USERS_TB', comment: '회원 정보 테이블'});
     return users_tb;
 };
