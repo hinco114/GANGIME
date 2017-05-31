@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const path = require('path');
-const resSucc = require('../gangime');
+const resSucc = require('./gangime');
 const n_models = require('../models/').NOTICES_TB;
 
 router.route('/notices/new').get(showAdminPage);

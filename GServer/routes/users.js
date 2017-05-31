@@ -5,9 +5,8 @@ const nodemailer = require('nodemailer');
 const Users = require('../models').USERS_TB;
 const Verification = require('../models').VERIFICATIONS_TB;
 const emailConfig = require('../config/config.json')['nodemailer'];
-const jwtConfig = require('../config/config.json')['jwt'];
-const resSucc = require('../gangime');
-const jwt = require('jsonwebtoken');
+const resSucc = require('./gangime').resSucc;
+const createToken = require('./gangime').createToken;
 
 router.route('/verify').post(verify);
 router.route('/validNickname').post(validNickname);
@@ -66,10 +65,8 @@ async function signUp(req, res, next) {
         // Create user
         delete body.code;
         body.userPassword = encryptedPass;
-        const year = body.userBirthday.substring(0,4);
-        const month = body.userBirthday.substring(4,6) - 1;
-        const day = body.userBirthday.substring(6,8);
-        body.userBirthday = new Date(year, month, day).toLocaleDateString();
+        body.userBirthday = new Date(body.userBirthday);
+        console.log(body.userBirthday);
         const ret = await Users.create(body);
         // Delete Verification data
         await Verification.destroy({where: {emailAddress: body.userEmail}});
@@ -85,16 +82,19 @@ async function signIn(req, res, next) {
         // Password Matching
         let conditions = {
             where: {userEmail: body.userEmail},
-            attributes: ['userPassword']
+            attributes: ['userIdx', 'userPassword']
         };
         let result = await Users.findOne(conditions);
+        if (!result) {
+            throw new Error("Wrong userEmail");
+        }
         result = result.dataValues;
         const isMatch = await bcrypt.compare(body.userPassword, result.userPassword);
         // Return jwt
         if (!isMatch) {
             throw new Error("Password Not match");
         }
-        const token = jwt.sign({userIdx: result.userIdx}, jwtConfig.SECRET_KEY, {expiresIn: jwtConfig.EXPIRES});
+        const token = await createToken(result.userIdx);
         resSucc(res, {token: token});
     } catch (err) {
         next(err);
