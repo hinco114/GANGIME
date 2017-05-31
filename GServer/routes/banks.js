@@ -20,8 +20,12 @@ const getAllBank = () => {
     return new Promise((resolve, reject) => {
         const result = b_models.findAll({
             attributes: ['bankIdx', 'bankName', 'bankImageUrl']});
-        if(result) resolve(result);
-        else reject('error');
+        if(result){
+            resolve(result);
+        }
+        else{
+            reject('error');
+        }
     });
 }
 

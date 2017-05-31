@@ -59,8 +59,12 @@ const getList = (startIdx, endIdx) => {
         const result = n_models.findAll({
             where: {noticeIdx: {between: [startIdx, endIdx]}},
             attributes:['noticeIdx', 'noticeTitle', 'createdAt']});
-        if(result) resolve(result);
-        else reject('error');
+        if(result) {
+            resolve(result);
+        }
+        else {
+            reject('error');
+        }
     });
 }
 
@@ -70,8 +74,12 @@ const getDetail = (noticeIdx) => {
         const result = n_models.findOne({
             where: {noticeIdx: noticeIdx},
             attributes: ['noticeTitle', 'noticeContent', 'createdAt']});
-        if(result) resolve(result);
-        else reject('error');
+        if(result) {
+            resolve(result);
+        }
+        else {
+            reject('error');
+        }
     });
 }
 

@@ -22,8 +22,12 @@ const getAllList = () => {
         const result = s_models.findAll({
             include: [{model: l_models, attributes: ['lineNumber']}], // LINES_TB
             attributes:['stationIdx', 'stationName', 'stationX', 'stationY']}); // STATIONS_TB
-        if(result) resolve(result);
-        else reject('error');
+        if(result) {
+            resolve(result);
+        }
+        else {
+            reject('error');
+        }
     });
 }
 

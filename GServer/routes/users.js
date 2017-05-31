@@ -91,8 +91,11 @@ async function signIn(req, res, next) {
         result = result.dataValues;
         const isMatch = await bcrypt.compare(body.userPassword, result.userPassword);
         // Return jwt
+        if (!isMatch) {
+            throw new Error("Password Not match");
+        }
         const token = jwt.sign({userIdx: result.userIdx}, jwtConfig.SECRET_KEY, {expiresIn: jwtConfig.EXPIRES});
-        resSucc(res, token);
+        resSucc(res, {token: token});
     } catch (err) {
         next(err);
     }
