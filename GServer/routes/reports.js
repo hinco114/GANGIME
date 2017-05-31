@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const resSucc = require('../gangime');
+const resSucc = require('./gangime');
 const token_verify = require('../token_verify');
 const r_models = require('../models/').REPORTS_TB;
 const e_models = require('../models/').ERRANDS_TB;

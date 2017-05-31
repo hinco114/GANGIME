@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const resSucc = require('../gangime');
+const resSucc = require('./gangime');
 const b_models = require('../models/').BANKS_TB;
 
 router.route('/banks').get(showBanks);
