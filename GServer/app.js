@@ -8,6 +8,7 @@ const bodyParser = require('body-parser');
 const index = require('./routes/index');
 const users = require('./routes/users');
 const notices = require('./routes/notices');
+const banks = require('./routes/banks');
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use('/', index);
 app.use('/users', users);
 app.use(notices);
+app.use(banks);
 
 // catch 404 and forward to error handler
 app.use((req, res, next) => {
