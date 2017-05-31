@@ -16,7 +16,7 @@ async function showBanks(req, res, next){
 }
 
 /* 1_1 은행 목록 가져오기 */
-function getAllBank(){
+const getAllBank = () => {
     return new Promise((resolve, reject) => {
         const result = b_models.findAll({
             attributes: ['bankIdx', 'bankName', 'bankImageUrl']});
