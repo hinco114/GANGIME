@@ -17,10 +17,9 @@ async function getAllStations(req, res, next) {
 }
 
 /* 1_1 모든 지하철 정보 가져오기 */
-function getAllList(){
+const getAllList = () => {
     return new Promise((resolve, reject) => {
         const result = s_models.findAll({
-            // where: {stationIdx:1},
             include: [{model: l_models, attributes: ['lineNumber']}],
             attributes:['stationIdx', 'stationName', 'stationX', 'stationY']});
         if(result) resolve(result);

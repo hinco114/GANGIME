@@ -12,7 +12,7 @@ module.exports = (sequelize, DataTypes) => {
         comment: '지하철역 호선 정보 테이블',
         classMethods:{
             associate: function(s_models){
-                s_models.STATIONS_TB.hasMany(lines_tb, {foreignKey : 'stationIdx'});
+                s_models.STATIONS_TB.hasMany(lines_tb, {foreignKey : 'stationIdx', targetKey : 'stationIdx' });
             }
         }
     });

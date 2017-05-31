@@ -54,7 +54,7 @@ async function showNoticeDetail(req, res, next){
 }
 
 /* 3_1 공지사항 목록 가져오기 */
-function getList(startIdx, endIdx){
+const getList = (startIdx, endIdx) => {
     return new Promise((resolve, reject) => {
         const result = n_models.findAll({
             where: {noticeIdx: {between: [startIdx, endIdx]}},
@@ -65,7 +65,7 @@ function getList(startIdx, endIdx){
 }
 
 /* 4_1 선택한 공지글 가져오기 */
-function getDetail(noticeIdx) {
+const getDetail = (noticeIdx) => {
     return new Promise((resolve, reject) => {
         const result = n_models.findOne({
             where: {noticeIdx: noticeIdx},
