@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
 const Users = require('../models').USERS_TB;
 const Verification = require('../models').VERIFICATIONS_TB;
-const resSucc = require('../gangime');
 const emailConfig = require('../config/config.json')['nodemailer'];
-const bcrypt = require('bcrypt');
-
+const jwtConfig = require('../config/config.json')['jwt'];
+const resSucc = require('../gangime');
+const jwt = require('jsonwebtoken');
 
 router.route('/verify').post(verify);
 router.route('/validNickname').post(validNickname);
@@ -87,11 +88,14 @@ async function signIn(req, res, next) {
             attributes: ['userPassword']
         };
         let result = await Users.findOne(conditions);
-        result = result.dataValues.userPassword;
-        const isMatch = await bcrypt.compare(body.userPassword, result);
+        result = result.dataValues;
+        const isMatch = await bcrypt.compare(body.userPassword, result.userPassword);
         // Return jwt
-        // Not worked yet
-        resSucc(res, isMatch);
+        if (!isMatch) {
+            throw new Error("Password Not match");
+        }
+        const token = jwt.sign({userIdx: result.userIdx}, jwtConfig.SECRET_KEY, {expiresIn: jwtConfig.EXPIRES});
+        resSucc(res, {token: token});
     } catch (err) {
         next(err);
     }
