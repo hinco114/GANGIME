@@ -16,39 +16,39 @@ function showAdminPage(req, res) {
 }
 
 /* 2. 공지사항 게시 */
-async function postNotice(req, res, next){
+async function postNotice(req, res, next) {
     let body = req.body;
     let title = req.body.noticeTitle;
     let content = req.body.noticeContent;
     if (!title || !content) throw new Error("내용 누락");
 
-    try{
+    try {
         let result = await n_models.create(body);
         resSucc(res, result);
-    } catch(err){
+    } catch (err) {
         next(err);
     }
 }
 
 /* 3. 공지사항 글목록 보기 */
-async function showNoticeList(req, res, next){
+async function showNoticeList(req, res, next) {
     let startIdx = parseInt(req.query.index) || 1;
     let endIdx = startIdx + 5;
 
-    try{
+    try {
         let result = await getList(startIdx, endIdx);
         resSucc(res, result);
-    } catch(err){
+    } catch (err) {
         next(err);
     }
 }
 
 /* 4. 선택한 공지글 보기 */
-async function showNoticeDetail(req, res, next){
-    try{
+async function showNoticeDetail(req, res, next) {
+    try {
         let result = await getDetail(req.params.noticeIdx);
         resSucc(res, result);
-    } catch(err){
+    } catch (err) {
         next(err);
     }
 }
@@ -58,8 +58,9 @@ const getList = (startIdx, endIdx) => {
     return new Promise((resolve, reject) => {
         const result = n_models.findAll({
             where: {noticeIdx: {between: [startIdx, endIdx]}},
-            attributes:['noticeIdx', 'noticeTitle', 'createdAt']});
-        if(result) {
+            attributes: ['noticeIdx', 'noticeTitle', 'createdAt']
+        });
+        if (result) {
             resolve(result);
         }
         else {
@@ -73,8 +74,9 @@ const getDetail = (noticeIdx) => {
     return new Promise((resolve, reject) => {
         const result = n_models.findOne({
             where: {noticeIdx: noticeIdx},
-            attributes: ['noticeTitle', 'noticeContent', 'createdAt']});
-        if(result) {
+            attributes: ['noticeTitle', 'noticeContent', 'createdAt']
+        });
+        if (result) {
             resolve(result);
         }
         else {

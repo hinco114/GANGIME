@@ -19,11 +19,11 @@ async function registerErrand(req, res, next) {
     }
 }
 /* 2. 심부름 상세내역 보기 */
-async function showErrandDetail(req, res, next){
-    try{
+async function showErrandDetail(req, res, next) {
+    try {
         let result = await getErrandDetail(req.params.errandsIdx);
         resSucc(res, result);
-    } catch(err){
+    } catch (err) {
         next(err);
     }
 }
@@ -31,9 +31,15 @@ async function showErrandDetail(req, res, next){
 /* 1_1 DB에 심부름 등록 */
 const createErrand = (body) => {
     return new Promise((resolve, reject) => {
+        // 입력해야하는 부분 추가한 후 DB에서 create
         // TODO: (다혜) token, errandChatId => MongoDB 연결
-        const result = e_models.create(body + {requesterIdx:"token", errandChatId:"from Mongo", errandStatus:"입금대기"});
-        if (result){
+        let inputData = body;
+        inputData.requesterIdx = 'token';
+        inputData.errandChatId = 'chatId';
+        inputData.errandStatus = '입금대기';
+
+        const result = e_models.create(inputData);
+        if (result) {
             resolve(result);
         }
         else {
@@ -43,14 +49,28 @@ const createErrand = (body) => {
 }
 
 /* 2_1 해당 심부름의 내역 가져오기 */
-function getErrandDetail(errandIdx){
+function getErrandDetail(errandIdx) {
     return new Promise((resolve, reject) => {
-        const result = models.findOne({
+        let inputData = ['requesterIdx', 'errandTitle', 'errandContent',
+            'startStationIdx', 'arrivalStationIdx', 'stationDistance', 'deadlineDt',
+            'itemPrice', 'errandPrice', 'errandStatus'];
+
+        // TODO: (다혜) 순서?
+        // status = "취소 완료"일 때만 cancelReason 반환
+        let statusChk = e_models.findOne({
             where: {errandIdx: errandIdx},
-            attributes: ['requesterIdx', 'errandTitle', 'errandContent',
-                'startStationIdx', 'arrivalStationIdx', 'stationDistance', 'deadlineDt',
-                'itemPrice', 'errandPrice', 'errandStatus', 'cancelReason']});
-        if(result) {
+            attributes: ['cancelReason']
+        });
+        if(statusChk == '취소 완료'){
+            inputData.push('cancelReason');
+        }
+
+        const result = e_models.findOne({
+            where: {errandIdx: errandIdx},
+            attributes: inputData
+        });
+
+        if (result) {
             resolve(result);
         }
         else {

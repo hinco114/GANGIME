@@ -1,11 +1,11 @@
-/* 토큰 복호화 */
+/* V*/
 const jwt = require('jsonwebtoken');
-const secretKey = 'ggmtest'; // SECRET KEY
+// const jwtConfig = require('../config/config.json')['jwt'];
 //
 // const tokenVerifier = (token) => {
 //     if (token) {
 //         console.log('token :', token);
-//         jwt.verify(token, secretKey, (err, decoded) => {
+//         jwt.verify(token, jwtConfig.SECRET_KEY, (err, decoded) => {
 //             // if (decoded) req.user = decoded;
 //             if (decoded) return decoded;
 //         });

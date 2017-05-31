@@ -8,10 +8,10 @@ router.route('/stations').get(getAllStations);
 
 /* 1. 지하철 목록 가져오기 */
 async function getAllStations(req, res, next) {
-    try{
+    try {
         let result = await getAllList();
         resSucc(res, result);
-    } catch(err){
+    } catch (err) {
         next(err);
     }
 }
@@ -20,9 +20,10 @@ async function getAllStations(req, res, next) {
 const getAllList = () => {
     return new Promise((resolve, reject) => {
         const result = s_models.findAll({
-            include: [{model: l_models, attributes: ['lineNumber']}], // LINES_TB
-            attributes:['stationIdx', 'stationName', 'stationX', 'stationY']}); // STATIONS_TB
-        if(result) {
+            include: [{model: l_models, attributes: ['lineNumber']}],
+            attributes: ['stationIdx', 'stationName', 'stationX', 'stationY']
+        });
+        if (result) {
             resolve(result);
         }
         else {
