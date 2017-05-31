@@ -20,8 +20,8 @@ async function getAllStations(req, res, next) {
 const getAllList = () => {
     return new Promise((resolve, reject) => {
         const result = s_models.findAll({
-            include: [{model: l_models, attributes: ['lineNumber']}],
-            attributes:['stationIdx', 'stationName', 'stationX', 'stationY']});
+            include: [{model: l_models, attributes: ['lineNumber']}], // LINES_TB
+            attributes:['stationIdx', 'stationName', 'stationX', 'stationY']}); // STATIONS_TB
         if(result) resolve(result);
         else reject('error');
     });
