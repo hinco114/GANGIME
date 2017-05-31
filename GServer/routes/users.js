@@ -9,6 +9,9 @@ const emailConfig = require('../config/config.json')['nodemailer'];
 
 router.route('/verify').post(verify);
 router.route('/validNickname').post(validNickname);
+router.route('/')
+    .post(signUp);
+    // .get()
 
 async function verify(req, res, next) {
     try {
@@ -29,7 +32,6 @@ async function verify(req, res, next) {
         next(err);
     }
 }
-
 async function validNickname(req, res, next) {
     try {
         const condtions = {
@@ -38,16 +40,48 @@ async function validNickname(req, res, next) {
             },
             attributes: ['userIdx']
         };
+        // Find duplicate data
         const data = await Users.findOne(condtions);
         if (!data) {
+            // if null
             resSucc(res, null);
         } else {
+            // if not null
             throw new Error("Nickname Already Exist");
         }
     } catch (err) {
         next(err);
     }
 }
+
+
+async function signUp(req, res, next) {
+    try {
+        const body = req.body;
+        await isEqualCode(body.userEmail, body.code);
+
+    } catch (err) {
+        next(err);
+    }
+}
+
+const isEqualCode = (userEmail, code) => {
+    return new Promise((resolve, reject) => {
+        let conditions = {
+            where: {
+                userEmail: userEmail
+            },
+            attributes: code
+        };
+        const result = Users.findOne(conditions);
+        if (result.code == code) {
+            resolve(true);
+        } else {
+            reject(new Error("Verify code not match"))
+        }
+    });
+};
+
 
 const findUser = (emailAddr) => {
     const conditions = {
@@ -89,7 +123,9 @@ const addCode = (email, code) => {
         emailAddress: email,
         code: code
     };
+    // Delete duplicate data
     Verification.destroy({where: {emailAddress: email}});
+    // Create data
     return Verification.create(conditions);
 };
 
