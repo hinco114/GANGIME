@@ -1,5 +1,3 @@
-'use strict';
-
 const resSucc = (res, data) => {
     let resultModel = {
         msg: 'success'

@@ -5,13 +5,15 @@ const Users = require('../models').USERS_TB;
 const Verification = require('../models').VERIFICATIONS_TB;
 const resSucc = require('../gangime');
 const emailConfig = require('../config/config.json')['nodemailer'];
+const bcrypt = require('bcrypt');
 
 
 router.route('/verify').post(verify);
 router.route('/validNickname').post(validNickname);
 router.route('/')
     .post(signUp);
-    // .get()
+router.route('/login')
+    .post(signIn);
 
 async function verify(req, res, next) {
     try {
@@ -35,9 +37,7 @@ async function verify(req, res, next) {
 async function validNickname(req, res, next) {
     try {
         const condtions = {
-            where: {
-                userNickname: req.body.userNickname
-            },
+            where: {userNickname: req.body.userNickname},
             attributes: ['userIdx']
         };
         // Find duplicate data
@@ -58,27 +58,63 @@ async function validNickname(req, res, next) {
 async function signUp(req, res, next) {
     try {
         const body = req.body;
-        await isEqualCode(body.userEmail, body.code);
-
+        // Check emailAddress and code
+        await validCode(body.userEmail, body.code, next);
+        // Password encrypting
+        const encryptedPass = await bcrypt.hash(body.userPassword, 10);
+        // Create user
+        delete body.code;
+        body.userPassword = encryptedPass;
+        const year = body.userBirthday.substring(0,4);
+        const month = body.userBirthday.substring(4,6) - 1;
+        const day = body.userBirthday.substring(6,8);
+        body.userBirthday = new Date(year, month, day).toLocaleDateString();
+        const ret = await Users.create(body);
+        // Delete Verification data
+        await Verification.destroy({where: {emailAddress: body.userEmail}});
+        resSucc(res, {userIdx: ret.userIdx});
     } catch (err) {
         next(err);
     }
 }
 
-const isEqualCode = (userEmail, code) => {
+async function signIn(req, res, next) {
+    try {
+        const body = req.body;
+        // Password Matching
+        let conditions = {
+            where: {userEmail: body.userEmail},
+            attributes: ['userPassword']
+        };
+        let result = await Users.findOne(conditions);
+        result = result.dataValues.userPassword;
+        const isMatch = await bcrypt.compare(body.userPassword, result);
+        // Return jwt
+        // Not worked yet
+        resSucc(res, isMatch);
+    } catch (err) {
+        next(err);
+    }
+}
+
+const validCode = (userEmail, code, next) => {
     return new Promise((resolve, reject) => {
         let conditions = {
-            where: {
-                userEmail: userEmail
-            },
-            attributes: code
+            where: {emailAddress: userEmail},
+            attributes: ['code']
         };
-        const result = Users.findOne(conditions);
-        if (result.code == code) {
-            resolve(true);
-        } else {
-            reject(new Error("Verify code not match"))
-        }
+        // userEmail and Code matching
+        Verification.findOne(conditions).then((result) => {
+            if (!result) {
+                reject(new Error("Not valid email address"))
+            } else if (result.dataValues.code == code) {
+                resolve(true);
+            } else {
+                reject(new Error("Verify code not match"))
+            }
+        }).catch((err) => {
+            next(err);
+        })
     });
 };
 
@@ -96,6 +132,7 @@ const sendEmail = (emailAddr) => {
         const mailTo = emailAddr;
         // Generate random number ( 1000~9999 )
         const code = Math.floor(Math.random() * 8999) + 1000;
+        // Mail Setting and send
         const transporter = nodemailer.createTransport(emailConfig);
         const mailOption = {
             from: 'tacademy.server@gmail.com',
