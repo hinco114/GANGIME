@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const resSucc = require('../gangime');
 const e_models = require('../models/').ERRANDS_TB;
 
 router.route('/errand').post(registerErrand);
