@@ -12,19 +12,9 @@ async function reportUser(req, res, next) {
     let reportContent = req.body.reportContent;
     const userIdx = await tokenVerify(req.headers);
 
-    // let token = req.headers['token'];
-    // let decodedToken = null;
-    //
-    // if (token) {
-    //     decodedToken = tokenVerify(token);
-    // } else {
-    //     throw new Error("토큰 누락");
-    // }
-
     if (!errandIdx || !reportContent) {
         throw new Error("내용 누락");
     }
-    // TODO : DH_토큰에서 받아온 유저 인덱스 DB에 존재하는지 여부 체크?
     try {
         let result = await createReport(userIdx, errandIdx, reportContent);
         resSucc(res, result);

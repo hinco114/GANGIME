@@ -3,6 +3,7 @@ const router = express.Router();
 const resSucc = require('./gangime').resSucc;
 const tokenVerify = require('./gangime').tokenVerify;
 const e_models = require('../models/').ERRANDS_TB;
+const c_models = require('../models/').CANCEL_TB;
 
 router.route('/errands').post(registerErrand);
 router.route('/errands/:errandsIdx')
@@ -55,21 +56,27 @@ const getErrandDetail = (errandIdx) => {
         let inputData = ['requesterIdx', 'errandTitle', 'errandContent',
             'startStationIdx', 'arrivalStationIdx', 'stationDistance',
             'deadlineDt', 'itemPrice', 'errandPrice', 'errandStatus'];
-        try{
+        let result = null;
+
+        try {
             let statusChk = await e_models.findOne({
                 where: {errandIdx: errandIdx}, attributes: ['errandStatus']
             });
-
+            // TODO : (DB) cancelReason은 CANCEL_TB에 있다
             if (statusChk.dataValues.errandStatus == '취소완료') { // status = "취소완료"일 때만 cancelReason 컬럼 반환
-                inputData.push('cancelReason');
+                result = e_models.findOne({
+                    include: [{model: c_models, attributes: ['cancelReason']}],
+                    where: {errandIdx: errandIdx},
+                    attributes: inputData
+                });
+            }else{
+                result = e_models.findOne({
+                    where: {errandIdx: errandIdx},
+                    attributes: inputData
+                });
             }
-
-            const result = e_models.findOne({
-                where: {errandIdx: errandIdx},
-                attributes: inputData
-            });
             resolve(result);
-        }catch(err){
+        } catch (err) {
             reject(err)
         }
     });

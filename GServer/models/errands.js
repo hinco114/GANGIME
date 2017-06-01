@@ -1,8 +1,7 @@
 /**
  * ERRANDS_TB 심부름 정보 테이블
  */
-const e_models = require('../models/').USERS_TB;
-const s_models = require('../models/').STATIONS_TB;
+const models = require('../models/');
 
 module.exports = (sequelize, DataTypes) => {
     const errands_tb = sequelize.define('ERRANDS_TB', {
@@ -22,21 +21,27 @@ module.exports = (sequelize, DataTypes) => {
     }, {
         tableName: 'ERRANDS_TB', comment: '심부름 정보 테이블',
         classMethods: {
-            associate: function (e_models) {
-                errands_tb.hasMany(e_models.USERS_TB, {foreignKey: 'userIdx', targetKey: 'requesterIdx'});
-                errands_tb.hasMany(e_models.USERS_TB, {foreignKey: 'userIdx', targetKey: 'executorIdx'});
-            },
-            function (s_models){
-                errands_tb.hasMany(s_models.STATIONS_TB, {
-                    foreignKey: 'stationIdx',
-                    targetKey: 'startStationIdx'
-                });
-                errands_tb.hasMany(s_models.STATIONS_TB, {
-                    foreignKey: 'stationIdx',
-                    targetKey: 'arrivalStationIdx'
-                });
-            }
-        }
-    });
+            // associate: function (u_models) {
+            //     errands_tb.hasMany(u_models.USERS_TB, {foreignKey: 'userIdx', targetKey: 'requesterIdx'});
+            //     errands_tb.hasMany(u_models.USERS_TB, {foreignKey: 'userIdx', targetKey: 'executorIdx'});
+            // },
+            // function (s_models){
+            //     errands_tb.hasMany(s_models.STATIONS_TB, {
+            //         foreignKey: 'stationIdx',
+            //         targetKey: 'startStationIdx'
+            //     });
+            //     errands_tb.hasMany(s_models.STATIONS_TB, {
+            //         foreignKey: 'stationIdx',
+            //         targetKey: 'arrivalStationIdx'
+    //     });
+    // }
+    associate: function (models) {
+        errands_tb.hasMany(models.USERS_TB, {foreignKey: 'userIdx', targetKey: 'requesterIdx'});
+        errands_tb.hasMany(models.USERS_TB, {foreignKey: 'userIdx', targetKey: 'executorIdx'});
+        errands_tb.hasMany(models.STATIONS_TB, {foreignKey: 'stationIdx', targetKey: 'startStationIdx'});
+        errands_tb.hasMany(models.STATIONS_TB, {foreignKey: 'stationIdx', targetKey: 'arrivalStationIdx'});
+    }
+}
+});
     return errands_tb;
 };
