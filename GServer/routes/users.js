@@ -7,11 +7,14 @@ const Verification = require('../models').VERIFICATIONS_TB;
 const emailConfig = require('../config/config.json')['nodemailer'];
 const resSucc = require('./gangime').resSucc;
 const createToken = require('./gangime').createToken;
+const tokenVerify = require('./gangime').tokenVerify;
 
 router.route('/verify').post(verify);
 router.route('/validNickname').post(validNickname);
 router.route('/')
-    .post(signUp);
+    .post(signUp)
+    .get(getUserInfo)
+    .delete(deleteUser);
 router.route('/login')
     .post(signIn);
 
@@ -21,10 +24,12 @@ async function verify(req, res, next) {
         const emailAddr = req.body.userEmail;
         let data = await findUser(emailAddr);
         if (data) {
-            throw new Error("Email Already Registered");
+            throw new Error('Email Already Registered');
         }
         // send Email
-        const code = await sendEmail(emailAddr);
+        // const code = await sendEmail(emailAddr);
+        // While testing, not send a email. use 1234 code
+        const code = 1234;
 
         // Add to DB CODE value
         const ret = await addCode(emailAddr, code);
@@ -47,7 +52,7 @@ async function validNickname(req, res, next) {
             resSucc(res, null);
         } else {
             // if not null
-            throw new Error("Nickname Already Exist");
+            throw new Error('Nickname Already Exist');
         }
     } catch (err) {
         next(err);
@@ -66,11 +71,37 @@ async function signUp(req, res, next) {
         delete body.code;
         body.userPassword = encryptedPass;
         body.userBirthday = new Date(body.userBirthday);
-        console.log(body.userBirthday);
         const ret = await Users.create(body);
         // Delete Verification data
         await Verification.destroy({where: {emailAddress: body.userEmail}});
         resSucc(res, {userIdx: ret.userIdx});
+    } catch (err) {
+        next(err);
+    }
+}
+
+async function getUserInfo(req, res, next) {
+    try {
+        const userIdx = await tokenVerify(req.headers);
+        let conditions = {
+            where: {userIdx: userIdx},
+            attributes: ['userEmail', 'userNickname', 'userBirthday', 'userPhone', 'userDepositor', 'userAccount']
+        };
+        const data = await Users.findOne(conditions);
+        resSucc(res, data);
+    } catch (err) {
+        next(err);
+    }
+}
+
+async function deleteUser(req, res, next) {
+    try {
+        const userIdx = await tokenVerify(req.headers);
+        let conditions = {
+            where: {userIdx: userIdx}
+        };
+        const data = await Users.destroy(conditions);
+        resSucc(res, data);
     } catch (err) {
         next(err);
     }
@@ -84,17 +115,20 @@ async function signIn(req, res, next) {
             where: {userEmail: body.userEmail},
             attributes: ['userIdx', 'userPassword']
         };
-        let result = await Users.findOne(conditions);
+        let result = await
+            Users.findOne(conditions);
         if (!result) {
-            throw new Error("Wrong userEmail");
+            throw new Error('Wrong userEmail');
         }
         result = result.dataValues;
-        const isMatch = await bcrypt.compare(body.userPassword, result.userPassword);
+        const isMatch = await
+            bcrypt.compare(body.userPassword, result.userPassword);
         // Return jwt
         if (!isMatch) {
-            throw new Error("Password Not match");
+            throw new Error('Password Not match');
         }
-        const token = await createToken(result.userIdx);
+        const token = await
+            createToken(result.userIdx);
         resSucc(res, {token: token});
     } catch (err) {
         next(err);
@@ -110,11 +144,11 @@ const validCode = (userEmail, code, next) => {
         // userEmail and Code matching
         Verification.findOne(conditions).then((result) => {
             if (!result) {
-                reject(new Error("Not valid email address"))
+                reject(new Error('Not valid email address'))
             } else if (result.dataValues.code == code) {
                 resolve(true);
             } else {
-                reject(new Error("Verify code not match"))
+                reject(new Error('Verify code not match'))
             }
         }).catch((err) => {
             next(err);
