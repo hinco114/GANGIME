@@ -1,21 +1,42 @@
 /**
  * ERRANDS_TB 심부름 정보 테이블
  */
+const e_models = require('../models/').USERS_TB;
+const s_models = require('../models/').STATIONS_TB;
+
 module.exports = (sequelize, DataTypes) => {
     const errands_tb = sequelize.define('ERRANDS_TB', {
         errandIdx: {type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true},
-        requesterIdx: {type: DataTypes.INTEGER, allowNull: false, references: {model: 'USERS_TB', key: 'userIdx'}},
-        executorIdx: {type: DataTypes.INTEGER, references: {model: 'USERS_TB', key: 'userIdx'}},
+        requesterIdx: {type: DataTypes.INTEGER, allowNull: false},
+        executorIdx: {type: DataTypes.INTEGER},
         errandTitle: {type: DataTypes.STRING, allowNull: false},
         errandContent: {type: DataTypes.TEXT, allowNull: false},
-        startStationIdx: {type: DataTypes.INTEGER, allowNull: false, references: {model: 'STATIONS_TB', key: 'stationIdx'}},
-        arrivalStationIdx: {type: DataTypes.INTEGER, allowNull: false, references: {model: 'STATIONS_TB', key: 'stationIdx'}},
+        startStationIdx: {type: DataTypes.INTEGER, allowNull: false},
+        arrivalStationIdx: {type: DataTypes.INTEGER, allowNull: false},
         stationDistance: {type: DataTypes.INTEGER, allowNull: false},
         deadlineDt: {type: DataTypes.DATE, allowNull: false},
         itemPrice: {type: DataTypes.INTEGER, allowNull: false},
         errandPrice: {type: DataTypes.INTEGER, allowNull: false,},
         errandChatId: {type: DataTypes.STRING, allowNull: false}, // MongoDB, ERRANDSCHATS_TB의 컬럼 _id
         errandStatus: {type: DataTypes.STRING, allowNull: false,},
-    }, {tableName: 'ERRANDS_TB', comment: '심부름 정보 테이블'});
+    }, {
+        tableName: 'ERRANDS_TB', comment: '심부름 정보 테이블',
+        classMethods: {
+            associate: function (e_models) {
+                errands_tb.hasMany(e_models.USERS_TB, {foreignKey: 'userIdx', targetKey: 'requesterIdx'});
+                errands_tb.hasMany(e_models.USERS_TB, {foreignKey: 'userIdx', targetKey: 'executorIdx'});
+            },
+            function (s_models){
+                errands_tb.hasMany(s_models.STATIONS_TB, {
+                    foreignKey: 'stationIdx',
+                    targetKey: 'startStationIdx'
+                });
+                errands_tb.hasMany(s_models.STATIONS_TB, {
+                    foreignKey: 'stationIdx',
+                    targetKey: 'arrivalStationIdx'
+                });
+            }
+        }
+    });
     return errands_tb;
 };
