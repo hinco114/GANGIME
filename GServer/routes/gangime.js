@@ -18,11 +18,14 @@ const resSucc = (res, data) => {
     res.json(resultModel);
 };
 
-async function tokenVerify(token) {
+async function tokenVerify(headers) {
     return new Promise((resolve, reject) => {
         try {
-            const decoded = jwt.verify(token, jwtConfig.SECRET_KEY);
-            resolve({userIdx: decoded.userIdx});
+            if (!headers.token) {
+                throw new Error("Token not in Headers");
+            }
+            const decoded = jwt.verify(headers.token, jwtConfig.SECRET_KEY);
+            resolve(decoded.userIdx);
         } catch (err) {
             reject(err);
         }
