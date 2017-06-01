@@ -4,7 +4,7 @@
 module.exports = (sequelize, DataTypes) => {
     const users_tb = sequelize.define('USERS_TB', {
         userIdx: {type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true},
-        userEmail: {type: DataTypes.STRING(100), allowNull: false, unique: true, isEmail: true},
+        userEmail: {type: DataTypes.STRING(100), allowNull: false, unique: true, validate: {isEmail: true}},
         userPassword: {type: DataTypes.STRING, allowNull: false},
         userNickname: {type: DataTypes.STRING(10), allowNull: false, unique: true},
         userBirthday: {type: DataTypes.DATEONLY, allowNull: false},

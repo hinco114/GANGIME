@@ -17,6 +17,7 @@ router.route('/')
 router.route('/verify').post(verify);
 router.route('/validNickname').post(validNickname);
 router.route('/login').post(signIn);
+router.route('/resetPass').post(resetPass);
 
 async function verify(req, res, next) {
     try {
@@ -58,15 +59,12 @@ async function validNickname(req, res, next) {
             where: {userNickname: req.body.userNickname},
             attributes: ['userIdx']
         };
-        // Find duplicate data
+        // Check validation
         const data = await Users.findOne(condtions);
-        if (!data) {
-            // if null
-            resSucc(res, null);
-        } else {
-            // if not null
+        if (data) {
             throw new Error('Nickname Already Exist');
         }
+        resSucc(res, null);
     } catch (err) {
         next(err);
     }
@@ -76,8 +74,8 @@ async function validNickname(req, res, next) {
 async function signUp(req, res, next) {
     try {
         const body = req.body;
-        // Check emailAddress and code
-        await validCode(body.userEmail, body.code, next);
+        // Check userEmail and code
+        await validCode(body.userEmail, body.code);
         // Password encrypting
         const encryptedPass = await bcrypt.hash(body.userPassword, 10);
         // Create user
@@ -86,7 +84,7 @@ async function signUp(req, res, next) {
         body.userBirthday = new Date(body.userBirthday);
         const ret = await Users.create(body);
         // Delete Verification data
-        await Verification.destroy({where: {emailAddress: body.userEmail}});
+        await Verification.destroy({where: {userEmail: body.userEmail}});
         resSucc(res, {userIdx: ret.userIdx});
     } catch (err) {
         next(err);
@@ -184,25 +182,33 @@ async function matchPass(userIdx, password) {
     return true;
 }
 
-const validCode = (userEmail, code, next) => {
-    return new Promise((resolve, reject) => {
-        let conditions = {
-            where: {emailAddress: userEmail},
-            attributes: ['code']
-        };
-        // userEmail and Code matching
-        Verification.findOne(conditions).then((result) => {
-            if (!result) {
-                reject(new Error('Not valid email address'))
-            } else if (result.dataValues.code == code) {
-                resolve(true);
-            } else {
-                reject(new Error('Verify code not match'))
-            }
-        }).catch((err) => {
-            next(err);
-        })
-    });
+async function resetPass(req, res, next) {
+    try {
+        let body = req.body;
+        await validCode(body.userEmail, body.code);
+        const password = {userPassword: await bcrypt.hash(body.userPassword, 10)};
+        const where = {where: {userEmail: body.userEmail}};
+        await Users.update(password, where);
+        await Verification.destroy(where);
+        resSucc(res, null);
+    } catch (err) {
+        next(err);
+    }
+}
+
+const validCode = async (userEmail, code) => {
+    let conditions = {
+        where: {userEmail: userEmail},
+        attributes: ['code']
+    };
+    // userEmail and Code matching
+    const data = await Verification.findOne(conditions);
+    if (!data) {
+        throw new Error('Not valid email address')
+    } else if (data.dataValues.code != code) {
+        throw new Error('Verify code not match')
+    }
+    return true;
 };
 
 const sendEmail = (mailOption) => {
@@ -225,11 +231,11 @@ const sendEmail = (mailOption) => {
 
 const addCode = (email, code) => {
     const conditions = {
-        emailAddress: email,
+        userEmail: email,
         code: code
     };
     // Delete duplicate data
-    Verification.destroy({where: {emailAddress: email}});
+    Verification.destroy({where: {userEmail: email}});
     // Create data
     return Verification.create(conditions);
 };
