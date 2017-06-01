@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const jwtConfig = require('../config/config.json')['jwt'];
+const Users = require('../models').USERS_TB;
 
 const resSucc = (res, data) => {
     let resultModel = {
@@ -19,12 +20,16 @@ const resSucc = (res, data) => {
 };
 
 async function tokenVerify(headers) {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
         try {
             if (!headers.token) {
-                throw new Error("Token not in Headers");
+                throw new Error('Token not in Headers');
             }
             const decoded = jwt.verify(headers.token, jwtConfig.SECRET_KEY);
+            const existUser = await Users.findById(decoded.userIdx);
+            if (!existUser) {
+                throw new Error('Invalid Token')
+            }
             resolve(decoded.userIdx);
         } catch (err) {
             reject(err);
