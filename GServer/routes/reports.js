@@ -10,21 +10,23 @@ router.route('/reports').get(reportUser);
 async function reportUser(req, res, next) {
     let errandIdx = req.body.errandIdx;
     let reportContent = req.body.reportContent;
-    let token = req.headers['token'];
-    let decodedToken = null;
+    const userIdx = await tokenVerify(req.headers);
 
-    if (token) {
-        decodedToken = tokenVerify(token);
-    } else {
-        throw new Error("토큰 누락");
-    }
+    // let token = req.headers['token'];
+    // let decodedToken = null;
+    //
+    // if (token) {
+    //     decodedToken = tokenVerify(token);
+    // } else {
+    //     throw new Error("토큰 누락");
+    // }
 
     if (!errandIdx || !reportContent) {
         throw new Error("내용 누락");
     }
     // TODO : DH_토큰에서 받아온 유저 인덱스 DB에 존재하는지 여부 체크?
     try {
-        let result = await createReport(decodedToken, errandIdx, reportContent);
+        let result = await createReport(userIdx, errandIdx, reportContent);
         resSucc(res, result);
     } catch (err) {
         next(err);

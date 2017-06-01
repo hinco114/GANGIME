@@ -11,18 +11,12 @@ router.route('/errands/:errandsIdx')
 /* 1. 심부름 등록하기 */
 async function registerErrand(req, res, next) {
     let body = req.body;
-    let token = req.headers['token'];
-    let decodedToken = null;
+    // let decodedToken = tokenVerify(req.headers);
+    const userIdx = await tokenVerify(req.headers);
 
     //TODO : DH_내용 누락되는 경우 체크 필요성?
-    if (token) {
-        decodedToken = tokenVerify(token);
-    } else {
-        throw new Error("토큰 누락");
-    }
-
     try {
-        let result = await createErrand(body, decodedToken);
+        let result = await createErrand(body, userIdx);
         resSucc(res, result);
     } catch (err) {
         next(err);
@@ -39,12 +33,13 @@ async function showErrandDetail(req, res, next) {
 }
 
 /* 1_1 DB에 심부름 등록 */
-const createErrand = (body, decodedToken) => {
+const createErrand = (body, userIdx) => {
     return new Promise((resolve, reject) => {
         // 입력해야하는 부분 추가한 후 DB에서 create
         // TODO: DH_token, errandChatId => MongoDB 연결
         let inputData = body;
-        inputData.requesterIdx = decodedToken;
+        console.log(inputData);
+        inputData.requesterIdx = userIdx;
         inputData.errandChatId = 'chatId'; // Mongo
         inputData.errandStatus = '입금대기';
 
@@ -65,7 +60,7 @@ function getErrandDetail(errandIdx) {
             'startStationIdx', 'arrivalStationIdx', 'stationDistance',
             'deadlineDt', 'itemPrice', 'errandPrice', 'errandStatus'];
 
-        // TODO: DH_순서?
+        // TODO: async-await로 수정
         let statusChk = e_models.findOne({
             where: {errandIdx: errandIdx}, attributes: ['cancelReason']
         });

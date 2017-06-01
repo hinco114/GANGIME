@@ -25,7 +25,7 @@ async function tokenVerify(headers) {
                 throw new Error("Token not in Headers");
             }
             const decoded = jwt.verify(headers.token, jwtConfig.SECRET_KEY);
-            resolve({userIdx: decoded.userIdx});
+            resolve(decoded.userIdx);
         } catch (err) {
             reject(err);
         }
