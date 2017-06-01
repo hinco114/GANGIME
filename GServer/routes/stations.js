@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const resSucc = require('./gangime');
+const resSucc = require('./gangime').resSucc;
 const s_models = require('../models/').STATIONS_TB;
 const l_models = require('../models/').LINES_TB;
 
