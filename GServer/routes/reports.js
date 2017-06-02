@@ -4,7 +4,7 @@ const resSucc = require('./gangime').resSucc;
 const tokenVerify = require('./gangime').tokenVerify;
 const r_models = require('../models/').REPORTS_TB;
 
-router.route('/reports').post(reportUser);
+router.route('/').post(reportUser);
 
 /* 1. 신고하기 */
 async function reportUser(req, res, next) {

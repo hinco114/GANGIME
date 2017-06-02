@@ -3,7 +3,7 @@ const router = express.Router();
 const resSucc = require('./gangime').resSucc;
 const b_models = require('../models/').BANKS_TB;
 
-router.route('/banks').get(showBanks);
+router.route('/').get(showBanks);
 
 /* 1. 은행 목록 보여주기 */
 async function showBanks(req, res, next) {

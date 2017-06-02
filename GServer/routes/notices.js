@@ -4,11 +4,11 @@ const path = require('path');
 const resSucc = require('./gangime').resSucc;
 const n_models = require('../models/').NOTICES_TB;
 
-router.route('/notices/new').get(showAdminPage);
-router.route('/notices')
+router.route('/new').get(showAdminPage);
+router.route('/')
     .post(postNotice)
     .get(showNoticeList);
-router.route('/notices/:noticeIdx').get(showNoticeDetail);
+router.route('/:noticeIdx').get(showNoticeDetail);
 
 /* 1. 관리자 페이지 불러오기 */
 function showAdminPage(req, res) {

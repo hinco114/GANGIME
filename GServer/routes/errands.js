@@ -5,8 +5,8 @@ const tokenVerify = require('./gangime').tokenVerify;
 const e_models = require('../models/').ERRANDS_TB;
 const c_models = require('../models/').CANCEL_TB;
 
-router.route('/errands').post(registerErrand);
-router.route('/errands/:errandsIdx')
+router.route('/').post(registerErrand);
+router.route('/:errandsIdx')
     .get(showErrandDetail)
     .put(editErrand);
 
@@ -42,6 +42,19 @@ async function editErrand(req, res, next) {
         let result = await sendNewErrand(body, errandIdx, userIdx);
         // resSucc(res, result);
         res.send({msg: 'success', data: ''});
+    } catch (err) {
+        next(err);
+    }
+}
+
+/* 4. 심부름 찜하기 */
+async function storeErrand(req, res, next) {
+    const userIdx = await tokenVerify(req.headers);
+    let errandIdx = req.body.errandIdx;
+
+    try {
+        let result = await putIntoBox(userIdx, errandIdx);
+        resSucc(res, result);
     } catch (err) {
         next(err);
     }
@@ -119,5 +132,18 @@ const sendNewErrand = (body, errandIdx, userIdx) => {
         }
     });
 };
+
+/* 4_1 선택한 심부름 찜하기 */
+const putIntoBox = (userIdx, errandIdx) => {
+    return new Promise((resolve, reject) => {
+        const result = b_models.create({userIdx: userIdx, errandIdx: errandIdx});
+        if (result) {
+            resolve(result);
+        }
+        else {
+            reject('error');
+        }
+    });
+}
 
 module.exports = router;

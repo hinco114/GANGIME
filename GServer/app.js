@@ -12,7 +12,6 @@ const banks = require('./routes/banks');
 const stations = require('./routes/stations');
 const reports = require('./routes/reports');
 const errands = require('./routes/errands');
-const boxes = require('./routes/boxes');
 
 const app = express();
 
@@ -29,13 +28,12 @@ app.use(bodyParser.urlencoded({ extended: false }));
 // app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', index);
+app.use('/banks', banks);
+app.use('/errands', errands);
+app.use('/notices', notices);
+app.use('/reports', reports);
+app.use('/stations', stations);
 app.use('/users', users);
-app.use(notices);
-app.use(banks);
-app.use(stations);
-app.use(reports);
-app.use(errands);
-app.use(boxes);
 
 // catch 404 and forward to error handler
 app.use((req, res, next) => {

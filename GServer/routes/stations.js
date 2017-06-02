@@ -4,7 +4,7 @@ const resSucc = require('./gangime').resSucc;
 const s_models = require('../models/').STATIONS_TB;
 const l_models = require('../models/').LINES_TB;
 
-router.route('/stations').get(getAllStations);
+router.route('/').get(getAllStations);
 
 /* 1. 지하철 목록 가져오기 */
 async function getAllStations(req, res, next) {
