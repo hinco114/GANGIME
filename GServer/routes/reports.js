@@ -34,6 +34,6 @@ const createReport = (userIdx, errandIdx, reportContent) => {
             reject('error');
         }
     });
-}
+};
 
 module.exports = router;

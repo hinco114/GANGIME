@@ -28,6 +28,6 @@ const getAllBank = () => {
             reject('error');
         }
     });
-}
+};
 
 module.exports = router;

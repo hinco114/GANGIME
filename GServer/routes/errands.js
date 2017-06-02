@@ -7,7 +7,8 @@ const c_models = require('../models/').CANCEL_TB;
 
 router.route('/errands').post(registerErrand);
 router.route('/errands/:errandsIdx')
-    .get(showErrandDetail);
+    .get(showErrandDetail)
+    .put(editErrand);
 
 /* 1. 심부름 등록하기 */
 async function registerErrand(req, res, next) {
@@ -32,6 +33,20 @@ async function showErrandDetail(req, res, next) {
     }
 }
 
+/* 3. 심부름 수정하기 */
+async function editErrand(req, res, next) {
+    try {
+        let body = req.body;
+        let errandIdx = req.params.errandsIdx;
+        let userIdx = await tokenVerify(req.headers);
+        let result = await sendNewErrand(body, errandIdx, userIdx);
+        // resSucc(res, result);
+        res.send({msg: 'success', data: ''});
+    } catch (err) {
+        next(err);
+    }
+}
+
 /* 1_1 DB에 심부름 등록 */
 const createErrand = (body, userIdx) => {
     return new Promise((resolve, reject) => {
@@ -48,7 +63,7 @@ const createErrand = (body, userIdx) => {
             reject('error');
         }
     });
-}
+};
 
 /* 2_1 해당 심부름의 내역 가져오기 */
 const getErrandDetail = (errandIdx) => {
@@ -62,14 +77,14 @@ const getErrandDetail = (errandIdx) => {
             let statusChk = await e_models.findOne({
                 where: {errandIdx: errandIdx}, attributes: ['errandStatus']
             });
-            // TODO : (DB) cancelReason은 CANCEL_TB에 있다
-            if (statusChk.dataValues.errandStatus == '취소완료') { // status = "취소완료"일 때만 cancelReason 컬럼 반환
+
+            if (statusChk.dataValues.errandStatus === '취소완료') { // status = "취소완료"일 때만 cancelReason 컬럼 반환
                 result = e_models.findOne({
                     include: [{model: c_models, attributes: ['cancelReason']}],
                     where: {errandIdx: errandIdx},
                     attributes: inputData
                 });
-            }else{
+            } else {
                 result = e_models.findOne({
                     where: {errandIdx: errandIdx},
                     attributes: inputData
@@ -77,9 +92,32 @@ const getErrandDetail = (errandIdx) => {
             }
             resolve(result);
         } catch (err) {
-            reject(err)
+            reject(err);
         }
     });
-}
+};
+
+/* 3_1 새로운 내용으로 심부름 수정하기 */
+const sendNewErrand = (body, errandIdx, userIdx) => {
+    return new Promise(async (resolve, reject) => {
+        let result = null;
+        // TODO : (DH) errandStaus가 입금대기일 때만 가능
+        try {
+            let statusChk = await e_models.findOne({
+                where: {errandIdx: errandIdx}, attributes: ['errandStatus']
+            });
+
+            if (statusChk.dataValues.errandStatus === '입금대기') {
+                result = e_models.update(
+                    body, {where: {requesterIdx: userIdx, errandIdx: errandIdx}, returning: true});
+                resolve(result);
+            } else {
+                throw new Error('수정 불가능한 상태입니다');
+            }
+        } catch (err) {
+            reject(err);
+        }
+    });
+};
 
 module.exports = router;

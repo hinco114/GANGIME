@@ -30,6 +30,6 @@ const getAllList = () => {
             reject('error');
         }
     });
-}
+};
 
 module.exports = router;
