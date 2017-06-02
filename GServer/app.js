@@ -12,6 +12,7 @@ const banks = require('./routes/banks');
 const stations = require('./routes/stations');
 const reports = require('./routes/reports');
 const errands = require('./routes/errands');
+const boxes = require('./routes/boxes');
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.use(banks);
 app.use(stations);
 app.use(reports);
 app.use(errands);
+app.use(boxes);
 
 // catch 404 and forward to error handler
 app.use((req, res, next) => {

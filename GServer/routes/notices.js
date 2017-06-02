@@ -67,7 +67,7 @@ const getList = (startIdx, endIdx) => {
             reject('error');
         }
     });
-};
+}
 
 /* 4_1 선택한 공지글 가져오기 */
 const getDetail = (noticeIdx) => {
@@ -83,6 +83,6 @@ const getDetail = (noticeIdx) => {
             reject('error');
         }
     });
-};
+}
 
 module.exports = router;
