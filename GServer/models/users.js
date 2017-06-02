@@ -10,12 +10,21 @@ module.exports = (sequelize, DataTypes) => {
         userBirthday: {type: DataTypes.DATEONLY, allowNull: false},
         userPhone: {type: DataTypes.STRING(15), allowNull: false, unique: true},
         userAccount: {type: DataTypes.STRING(30), unique: true},
-        userBankIdx: {type: DataTypes.INTEGER, references: {model: 'BANKS_TB', key: 'bankIdx'}},
+        userBankIdx: {type: DataTypes.INTEGER}, //references: {model: 'BANKS_TB', key: 'userBankIdx'}},
         userStarAvg: {type: DataTypes.INTEGER},
         userDepositor: {type: DataTypes.STRING},
         profilePicture: {type: DataTypes.STRING, isUrl: true},
         profileThumbnail: {type: DataTypes.STRING, isUrl: true},
         fcmToken: {type: DataTypes.STRING},
-    }, {tableName: 'USERS_TB', comment: '회원 정보 테이블'});
+    }, {
+        timestamps: true,
+        tableName: 'USERS_TB',
+        comment: '회원 정보 테이블',
+        classMethods: {
+            associate: models => {
+                models.BANKS_TB.hasMany(users_tb, {foreignKey: 'userBankIdx'})
+            }
+        }
+    });
     return users_tb;
 };
