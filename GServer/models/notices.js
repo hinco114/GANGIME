@@ -6,6 +6,10 @@ module.exports = (sequelize, DataTypes) => {
         noticeIdx: {type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true},
         noticeTitle: {type: DataTypes.STRING, allowNull: false},
         noticeContent: {type: DataTypes.TEXT, allowNull: false}
-    }, {tableName: 'NOTICES_TB', comment: '공지사항 테이블'});
+    }, {
+        timestamps: true,
+        tableName: 'NOTICES_TB',
+        comment: '공지사항 테이블'
+    });
     return notices_tb;
 };

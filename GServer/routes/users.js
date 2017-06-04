@@ -4,6 +4,8 @@ const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
 const Users = require('../models').USERS_TB;
 const Verification = require('../models').VERIFICATIONS_TB;
+const b_models = require('../models').BOXES_TB;
+const e_models = require('../models').ERRANDS_TB;
 const emailConfig = require('../config/config.json')['nodemailer'];
 const resSucc = require('./gangime').resSucc;
 const createToken = require('./gangime').createToken;
@@ -18,6 +20,10 @@ router.route('/verify').post(verify);
 router.route('/validNickname').post(validNickname);
 router.route('/login').post(signIn);
 router.route('/resetPass').post(resetPass);
+router.route('/boxes')
+    .get(getBoxList)
+    .post(storeErrand)
+    .delete(deleteBoxItem);
 
 async function verify(req, res, next) {
     try {
@@ -238,6 +244,104 @@ const addCode = (email, code) => {
     Verification.destroy({where: {userEmail: email}});
     // Create data
     return Verification.create(conditions);
+};
+
+//////////////////////////////////////////////////////////////////////////////
+/* 1. 심부름 찜하기 */
+async function storeErrand(req, res, next) {
+    const userIdx = await tokenVerify(req.headers);
+    let errandIdx = req.body.errandIdx;
+
+    try {
+        let result = await putIntoBox(userIdx, errandIdx);
+        resSucc(res, result);
+    } catch (err) {
+        next(err);
+    }
+}
+
+/* 2. 심부름 찜한 목록 보기 */
+async function getBoxList(req, res, next) {
+    let startIdx = parseInt(req.query.index) || 1;
+    let endIdx = startIdx + 2;
+    const userIdx = await tokenVerify(req.headers);
+
+    try {
+        let result = await findBoxes(startIdx, endIdx, userIdx);
+        resSucc(res, result);
+    } catch (err) {
+        next(err);
+    }
+}
+
+/* 3. 심부름 찜한 목록 삭제하기 */
+async function deleteBoxItem(req, res, next) {
+    const userIdx = await tokenVerify(req.headers);
+    let errandIdx = req.body.errandIdx;
+
+    try {
+        let result = await deleteErrand(userIdx, errandIdx);
+        resSucc(res, result);
+    } catch (err) {
+        next(err);
+    }
+}
+
+/* 1_1 선택한 심부름 찜하기 */
+const putIntoBox = (userIdx, errandIdx) => {
+    return new Promise(async (resolve, reject) => {
+        const chkExist = await b_models.findOne({
+            where: {userIdx: userIdx, errandIdx: errandIdx}
+        }).then((chkExist) => {
+            if(chkExist === null){
+                const result = b_models.create({userIdx: userIdx, errandIdx: errandIdx});
+                resolve(result);
+            }else{
+                throw new Error('이미 찜한 심부름입니다');
+            }
+        }).catch((err) =>{
+            reject(err);
+        });
+    });
+};
+
+/* 2_1  찜한 전체 심부름 목록 가져오기 */
+const findBoxes = (startIdx, endIdx, userIdx) => {
+    return new Promise((resolve, reject) => {
+        const result = b_models.findAll({
+            offset: startIdx - 1,
+            limit: 5, // TODO : (DH) 페이지
+            where: {userIdx: userIdx},
+            attributes: ['errandIdx'],
+            include: [{
+                model: e_models, attributes: ['errandIdx', 'errandTitle',
+                    'startStationIdx', 'arrivalStationIdx', 'errandPrice', 'itemPrice']
+            }]
+        });
+
+        if (result) {
+            resolve(result);
+        }
+        else {
+            reject('error');
+        }
+    })
+};
+
+/* 3_1 선택한 심부름 삭제하기 */
+const deleteErrand = (userIdx, errandIdx) => {
+    return new Promise((resolve, reject) => {
+        const result = b_models.destroy({
+            where: {errandIdx: errandIdx, userIdx: userIdx}
+        });
+
+        if (result) {
+            resolve(result);
+        }
+        else {
+            reject('error');
+        }
+    })
 };
 
 module.exports = router;

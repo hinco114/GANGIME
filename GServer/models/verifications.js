@@ -6,6 +6,10 @@ module.exports = (sequelize, DataTypes) => {
         verificationIdx: {type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true},
         userEmail: {type: DataTypes.STRING, allowNull: false, validate: {isEmail: true}},
         code: {type: DataTypes.INTEGER, allowNull: false}
-    }, {timestamps: false, tableName: 'VERIFICATIONS_TB', comment: '유저의 이메일 인증 번호 관리 테이블'});
+    }, {
+        timestamps: false,
+        tableName: 'VERIFICATIONS_TB',
+        comment: '유저의 이메일 인증 번호 관리 테이블'
+    });
     return verifications_tb;
 };

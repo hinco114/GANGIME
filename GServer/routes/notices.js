@@ -57,7 +57,7 @@ async function showNoticeDetail(req, res, next) {
 const getList = (startIdx, endIdx) => {
     return new Promise((resolve, reject) => {
         const result = n_models.findAll({
-            where: {noticeIdx: {between: [startIdx, endIdx]}},
+            where: {noticeIdx: {between: [startIdx, endIdx]}}, // TODO : (DH) 페이지네이션 부분 offset, limit으로 변경하기
             attributes: ['noticeIdx', 'noticeTitle', 'createdAt']
         });
         if (result) {

@@ -4,11 +4,14 @@ const resSucc = require('./gangime').resSucc;
 const tokenVerify = require('./gangime').tokenVerify;
 const e_models = require('../models/').ERRANDS_TB;
 const c_models = require('../models/').CANCEL_TB;
+const b_models = require('../models/').BOXES_TB;
 
 router.route('/').post(registerErrand);
 router.route('/:errandsIdx')
     .get(showErrandDetail)
     .put(editErrand);
+router.route('/:errandsIdx/cancel')
+    .post(requestCancel);
 
 /* 1. 심부름 등록하기 */
 async function registerErrand(req, res, next) {
@@ -47,13 +50,13 @@ async function editErrand(req, res, next) {
     }
 }
 
-/* 4. 심부름 찜하기 */
-async function storeErrand(req, res, next) {
-    const userIdx = await tokenVerify(req.headers);
-    let errandIdx = req.body.errandIdx;
-
+/* 4. 상대방에게 심부름 취소 요청하기 */
+async function requestCancel(req,res, next){
     try {
-        let result = await putIntoBox(userIdx, errandIdx);
+        let userIdx = await tokenVerify(req.headers);
+        let errandIdx = req.params.errandsIdx;
+        let reason = req.body.cancelReason;
+        let result = await registerCancel(userIdx, errandIdx, reason);
         resSucc(res, result);
     } catch (err) {
         next(err);
@@ -114,7 +117,6 @@ const getErrandDetail = (errandIdx) => {
 const sendNewErrand = (body, errandIdx, userIdx) => {
     return new Promise(async (resolve, reject) => {
         let result = null;
-        // TODO : (DH) errandStaus가 입금대기일 때만 가능
         try {
             let statusChk = await e_models.findOne({
                 where: {errandIdx: errandIdx}, attributes: ['errandStatus']
@@ -133,17 +135,13 @@ const sendNewErrand = (body, errandIdx, userIdx) => {
     });
 };
 
-/* 4_1 선택한 심부름 찜하기 */
-const putIntoBox = (userIdx, errandIdx) => {
+/* 4_1 심부름 취소 정보 등록하기 */
+const registerCancel = (userIdx, errandIdx, reason) => {
     return new Promise((resolve, reject) => {
-        const result = b_models.create({userIdx: userIdx, errandIdx: errandIdx});
-        if (result) {
-            resolve(result);
-        }
-        else {
-            reject('error');
-        }
-    });
+        // 해당 심부름 정보를 취소 테이블에 저장하기
+        // 심부름의 상태를 취소대기중으로 변경
+    })
 }
+
 
 module.exports = router;
