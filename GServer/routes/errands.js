@@ -6,10 +6,10 @@ const e_models = require('../models/').ERRANDS_TB;
 const c_models = require('../models/').CANCEL_TB;
 
 router.route('/').post(registerErrand);
-router.route('/:errandsIdx')
+router.route('/:errandIdx')
     .get(showErrandDetail)
     .put(editErrand);
-router.route('/:errandsIdx/cancel')
+router.route('/:errandIdx/cancel')
     .post(requestCancel);
 
 /* 1. 심부름 등록하기 */
@@ -28,7 +28,7 @@ async function registerErrand(req, res, next) {
 /* 2. 심부름 상세내역 보기 */
 async function showErrandDetail(req, res, next) {
     try {
-        let result = await getErrandDetail(req.params.errandsIdx);
+        let result = await getErrandDetail(req.params.errandIdx);
         resSucc(res, result);
     } catch (err) {
         next(err);
@@ -39,7 +39,7 @@ async function showErrandDetail(req, res, next) {
 async function editErrand(req, res, next) {
     try {
         let body = req.body;
-        let errandIdx = req.params.errandsIdx;
+        let errandIdx = req.params.errandIdx;
         let userIdx = await tokenVerify(req.headers);
         let result = await sendNewErrand(body, errandIdx, userIdx);
         // resSucc(res, result);
@@ -53,7 +53,7 @@ async function editErrand(req, res, next) {
 async function requestCancel(req, res, next) {
     try {
         let userIdx = await tokenVerify(req.headers);
-        let errandIdx = req.params.errandsIdx;
+        let errandIdx = req.params.errandIdx;
         let reason = req.body.cancelReason;
         let result = await registerCancel(userIdx, errandIdx, reason);
         resSucc(res, result);
