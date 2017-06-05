@@ -6,27 +6,28 @@ const Sequelize = require('sequelize');
 const basename = path.basename(module.filename);
 const env = process.env.NODE_ENV || 'development';
 const config = require(__dirname + '/../config/config.json')[env];
+const mongoConfig = require(__dirname + '/../config/config.json')[mongodb];
+const mongoose = require('mongoose');
 const db = {};
-const sequelize = config.use_env_variable ?
-    new Sequelize(process.env[config.use_env_variable])
+const sequelize = config.use_env_variable
+    ? new Sequelize(process.env[config.use_env_variable])
     : new Sequelize(config.database, config.username, config.password, config);
-// if (config.use_env_variable) {
-//     const sequelize = new Sequelize(process.env[config.use_env_variable]);
-// } else {
-//     const sequelize = new Sequelize(config.database, config.username, config.password, config);
-// }
+
+mongoose.Promise = global.Promise;
+mongoose.connect(mongoConfig.url);
+db.errandChats = require('./errandChats');
 
 fs
     .readdirSync(__dirname)
-    .filter(function (file) {
-        return (file.indexOf('.') !== 0) && (file !== basename) && (file.slice(-3) === '.js');
+    .filter(file => {
+        return (file.indexOf('.') !== 0) && (file !== basename) && (file.slice(-3) === '.js' && file !== 'errandChats.js');
     })
-    .forEach(function (file) {
+    .forEach(file => {
         const model = sequelize['import'](path.join(__dirname, file));
         db[model.name] = model;
     });
 
-Object.keys(db).forEach(function (modelName) {
+Object.keys(db).forEach(modelName => {
     if (db[modelName].associate) {
         db[modelName].associate(db);
     }
@@ -34,5 +35,9 @@ Object.keys(db).forEach(function (modelName) {
 
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
+
+mongoose.connection.once('open', () => {
+   console.log('Mongoose on!');
+});
 
 module.exports = db;
