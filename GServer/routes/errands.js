@@ -4,13 +4,14 @@ const resSucc = require('./gangime').resSucc;
 const tokenVerify = require('./gangime').tokenVerify;
 const e_models = require('../models/').ERRANDS_TB;
 const c_models = require('../models/').CANCEL_TB;
+const s_models = require('../models/').STARS_TB;
 
 router.route('/').post(registerErrand);
 router.route('/:errandIdx')
     .get(showErrandDetail)
     .put(editErrand);
-router.route('/:errandIdx/cancel')
-    .post(requestCancel);
+router.route('/:errandIdx/cancel').post(requestCancel);
+router.route('/:errandIdx/star').post(evaluateErrand);
 
 /* 1. 심부름 등록하기 */
 async function registerErrand(req, res, next) {
@@ -56,6 +57,19 @@ async function requestCancel(req, res, next) {
         let errandIdx = req.params.errandIdx;
         let reason = req.body.cancelReason;
         let result = await registerCancel(userIdx, errandIdx, reason);
+        resSucc(res, result);
+    } catch (err) {
+        next(err);
+    }
+}
+
+/* 5. 심부름 평가하기  */
+async function evaluateErrand(req, res, next) {
+    try {
+        let userIdx = await tokenVerify(req.headers);
+        let errandIdx = req.params.errandIdx;
+        let point = parseInt(req.body.stars);
+        let result = await addStars(userIdx, errandIdx, point);
         resSucc(res, result);
     } catch (err) {
         next(err);
@@ -152,11 +166,27 @@ const registerCancel = (userIdx, errandIdx, reason) => {
             let changeStatus = await e_models.update(
                 {errandStatus: "취소요청"}, {where: {errandIdx: errandIdx}, returning: true}
             );
+            resolve(changeStatus);
         } catch (err) {
             reject(err);
         }
     })
-}
+};
+
+/* 5_1 평가 테이블에 점수 입력하기 */
+const addStars = (userIdx, errandIdx, point) => {
+    return new Promise((resolve, reject) => {
+        let result = s_models.create({
+            userIdx: userIdx, errandIdx: errandIdx, point: point
+        })
+        if (result) {
+            resolve(result);
+        }
+        else {
+            reject('error');
+        }
+    })
+};
 
 
 module.exports = router;
