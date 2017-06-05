@@ -42,9 +42,8 @@ async function editErrand(req, res, next) {
         let body = req.body;
         let errandIdx = req.params.errandIdx;
         let userIdx = await tokenVerify(req.headers);
-        let result = await sendNewErrand(body, errandIdx, userIdx);
-        // resSucc(res, result);
-        res.send({msg: 'success', data: ''});
+        await sendNewErrand(body, errandIdx, userIdx);
+        resSucc(res, null);
     } catch (err) {
         next(err);
     }
@@ -160,7 +159,7 @@ const registerCancel = (userIdx, errandIdx, reason) => {
             let executorIdx = findTarget.dataValues.executorIdx;
             let targetUserIdx = (requesterIdx === userIdx) ? executorIdx : requesterIdx;
 
-            let saveReason = await c_models.create(
+            await c_models.create(
                 {errandIdx: errandIdx, targetUserIdx: targetUserIdx, cancelReason: reason});
 
             let changeStatus = await e_models.update(
@@ -178,7 +177,7 @@ const addStars = (userIdx, errandIdx, point) => {
     return new Promise((resolve, reject) => {
         let result = s_models.create({
             userIdx: userIdx, errandIdx: errandIdx, point: point
-        })
+        });
         if (result) {
             resolve(result);
         }

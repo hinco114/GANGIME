@@ -24,6 +24,7 @@ router.route('/boxes')
     .get(getBoxList)
     .post(storeErrand)
     .delete(deleteBoxItem);
+router.route('/fcm').post(registerFcm);
 
 async function verify(req, res, next) {
     try {
@@ -287,19 +288,34 @@ async function deleteBoxItem(req, res, next) {
     }
 }
 
+/* 4. FCM 등록하기 */
+async function registerFcm(req, res, next) {
+    const userIdx = await tokenVerify(req.headers);
+    let fcmToken = req.body.fcmToken;
+
+    try {
+        await addFcm(userIdx, fcmToken);
+        // TODO : (DH)) update와 같이 값이 반환되지 않은 경우, result가 없다는 이유로 이렇게 진행해도 될지?
+        resSucc(res, null);
+    } catch (err) {
+        next(err);
+    }
+}
+
 /* 1_1 선택한 심부름 찜하기 */
 const putIntoBox = (userIdx, errandIdx) => {
     return new Promise(async (resolve, reject) => {
+        // TODO : (DH) await 비동기식으로 다시 변경하기
         const chkExist = await b_models.findOne({
             where: {userIdx: userIdx, errandIdx: errandIdx}
         }).then((chkExist) => {
-            if(chkExist === null){
+            if (chkExist === null) {
                 const result = b_models.create({userIdx: userIdx, errandIdx: errandIdx});
                 resolve(result);
-            }else{
+            } else {
                 throw new Error('이미 찜한 심부름입니다');
             }
-        }).catch((err) =>{
+        }).catch((err) => {
             reject(err);
         });
     });
@@ -343,5 +359,17 @@ const deleteErrand = (userIdx, errandIdx) => {
         }
     })
 };
+
+/* 4_1 FCM 토큰 정보 저장하기 */
+const addFcm = (userIdx, fcmToken) => {
+    return new Promise((resolve, reject) => {
+        try{
+            const result = Users.update({fcmToken: fcmToken}, {where: {userIdx: userIdx}});
+            resolve(result);
+        }catch(err){
+            reject(err);
+        }
+    })
+}
 
 module.exports = router;
