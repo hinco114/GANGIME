@@ -5,6 +5,7 @@ const tokenVerify = require('./gangime').tokenVerify;
 const e_models = require('../models/').ERRANDS_TB;
 const c_models = require('../models/').CANCEL_TB;
 const s_models = require('../models/').STARS_TB;
+const errandChats = require('../models/').errandChats;
 
 router.route('/').post(registerErrand);
 router.route('/:errandIdx')
@@ -12,6 +13,7 @@ router.route('/:errandIdx')
     .put(editErrand);
 router.route('/:errandIdx/cancel').post(requestCancel);
 router.route('/:errandIdx/star').post(evaluateErrand);
+router.route('/errands/:errandsIdx/chats').get(getChats);
 
 /* 1. 심부름 등록하기 */
 async function registerErrand(req, res, next) {
@@ -71,6 +73,26 @@ async function evaluateErrand(req, res, next) {
         let point = parseInt(req.body.stars);
         let result = await addStars(userIdx, errandIdx, point);
         resSucc(res, result);
+    } catch (err) {
+        next(err)
+    }
+}
+
+/* 6. 채팅내용 가져오기 */
+async function getChats(req, res, next) {
+    try {
+        let userIdx = await tokenVerify(req.headers);
+        let errandIdx = req.params.errandsIdx;
+        const errand = await e_models.findById(errandIdx);
+        if (!errand) {
+            throw new Error('Errand not found');
+        }
+        const ret = await errandChats.findById(errand.errandChatId);
+        console.log(ret.chats);
+        resSucc(res, ret['chats']);
+        // let result = await sendNewErrand(body, errandIdx, userIdx);
+        // resSucc(res, result);
+        // res.send({msg: 'success', data: ''});
     } catch (err) {
         next(err);
     }
@@ -178,7 +200,7 @@ const addStars = (userIdx, errandIdx, point) => {
     return new Promise((resolve, reject) => {
         let result = s_models.create({
             userIdx: userIdx, errandIdx: errandIdx, point: point
-        })
+        });
         if (result) {
             resolve(result);
         }

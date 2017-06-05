@@ -24,6 +24,9 @@ router.route('/boxes')
     .get(getBoxList)
     .post(storeErrand)
     .delete(deleteBoxItem);
+router.route('/accounts')
+    .post(addAccount)
+    .put(addAccount);
 
 async function verify(req, res, next) {
     try {
@@ -200,6 +203,13 @@ async function resetPass(req, res, next) {
     } catch (err) {
         next(err);
     }
+}
+
+//TODO: 완성할것
+async function addAccount(req, res, next) {
+    const userIdx = await tokenVerify(req.headers);
+    const body = req.body;
+
 }
 
 const validCode = async (userEmail, code) => {

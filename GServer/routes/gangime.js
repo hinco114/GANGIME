@@ -30,16 +30,16 @@ async function tokenVerify(headers) {
             if (!existUser) {
                 throw new Error('Invalid Token')
             }
-            resolve(decoded.userIdx);
+            resolve(decoded);
         } catch (err) {
             reject(err);
         }
     })
 }
 
-async function createToken(userIdx) {
+async function createToken(userIdx, userNickname) {
     try {
-        const token = jwt.sign({userIdx: userIdx}, jwtConfig.SECRET_KEY, {expiresIn: jwtConfig.EXPIRES});
+        const token = jwt.sign({userIdx: userIdx, userNickname: userNickname}, jwtConfig.SECRET_KEY, {expiresIn: jwtConfig.EXPIRES});
         return token;
     } catch (err) {
         next(err);
