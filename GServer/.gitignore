@@ -40,3 +40,6 @@ db
 
 # Config Files
 config
+
+# package-lock
+package-lock.json

@@ -4,7 +4,6 @@ const resSucc = require('./gangime').resSucc;
 const tokenVerify = require('./gangime').tokenVerify;
 const e_models = require('../models/').ERRANDS_TB;
 const c_models = require('../models/').CANCEL_TB;
-const b_models = require('../models/').BOXES_TB;
 
 router.route('/').post(registerErrand);
 router.route('/:errandsIdx')
@@ -51,7 +50,7 @@ async function editErrand(req, res, next) {
 }
 
 /* 4. 상대방에게 심부름 취소 요청하기 */
-async function requestCancel(req,res, next){
+async function requestCancel(req, res, next) {
     try {
         let userIdx = await tokenVerify(req.headers);
         let errandIdx = req.params.errandsIdx;
@@ -135,11 +134,27 @@ const sendNewErrand = (body, errandIdx, userIdx) => {
     });
 };
 
-/* 4_1 심부름 취소 정보 등록하기 */
+/* 4_1 심부름 취소 요청 정보 등록하기 */
 const registerCancel = (userIdx, errandIdx, reason) => {
-    return new Promise((resolve, reject) => {
-        // 해당 심부름 정보를 취소 테이블에 저장하기
-        // 심부름의 상태를 취소대기중으로 변경
+    return new Promise(async (resolve, reject) => {
+        try {
+            let findTarget = await e_models.findOne({
+                where: {errandIdx: errandIdx},
+                attributes: ['requesterIdx', 'executorIdx']
+            });
+            let requesterIdx = findTarget.dataValues.requesterIdx;
+            let executorIdx = findTarget.dataValues.executorIdx;
+            let targetUserIdx = (requesterIdx === userIdx) ? executorIdx : requesterIdx;
+
+            let saveReason = await c_models.create(
+                {errandIdx: errandIdx, targetUserIdx: targetUserIdx, cancelReason: reason});
+
+            let changeStatus = await e_models.update(
+                {errandStatus: "취소요청"}, {where: {errandIdx: errandIdx}, returning: true}
+            );
+        } catch (err) {
+            reject(err);
+        }
     })
 }
 
