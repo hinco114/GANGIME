@@ -39,7 +39,7 @@ db
 .idea
 
 # Config Files
-config
+#config
 
 # package-lock
 package-lock.json

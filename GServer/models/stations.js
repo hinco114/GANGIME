@@ -6,7 +6,13 @@ module.exports = (sequelize, DataTypes) => {
     }, {
         timestamps: false,
         tableName: 'STATIONS_TB',
-        comment: '지하철역 정보 테이블'
+        comment: '지하철역 정보 테이블',
+        classMethods: {
+            associate: models => {
+                models.ERRANDS_TB.belongsTo(stations_tb, {foreignKey: 'startStationIdx'});
+                models.ERRANDS_TB.belongsTo(stations_tb, {foreignKey: 'arrivalStationIdx'});
+            }
+        }
     });
     return stations_tb;
 };
