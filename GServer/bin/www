@@ -7,7 +7,7 @@
 const app = require('../app');
 const debug = require('debug')('gserver:server');
 const http = require('http');
-const models = require("../models");
+const models = require('../models');
 
 
 /**
@@ -18,21 +18,92 @@ const port = normalizePort(process.env.PORT || '3000');
 app.set('port', port);
 
 /**
- * Create HTTP server.
- */
-
-const server = http.createServer(app);
-
-/**
  * Listen on provided port, on all network interfaces.
  */
-// sync() will create all table if they doesn't exist in database
-models.sequelize.sync().then(function () {
+// sync with Initializing Dummy Datas
+models.sequelize.sync().then(async () => {
     server.listen(port);
     server.on('error', onError);
     server.on('listening', onListening);
     console.log('Sync complete');
+    const csv = require('csvtojson');
+    // ------------------------ STAIONS_TB 초기화 --------------------------
+    await models.STATIONS_TB.findAndCountAll({logging: false})
+        .then(result => {
+            if (result.count === 0) {
+                let data = [];
+                const csvFilePath = '../config/stations_data.csv';
+                csv()
+                    .fromFile(csvFilePath)
+                    .on('json', parsed => {
+                        if (!data.find(station => {
+                                return station.stationName === parsed.이름
+                            })) {
+                            if (parsed.이름 && parsed.X && parsed.Y) {
+                                let newStation = {};
+                                newStation.stationName = parsed.이름;
+                                newStation.stationLocation = {type: 'Point', coordinates: [parsed.X, parsed.Y]};
+                                data.push(newStation);
+                            }
+                        }
+                    })
+                    .on('end_parsed', () => {
+                        models.STATIONS_TB.bulkCreate(data,{logging: false})
+                            .then(() => {
+                                console.log('Station Data init Complete');
+                            }).catch((err) => {
+                            console.log('THE ERROR : ' + err);
+                        })
+                    });
+            }
+
+        }).catch(err => {
+        console.log(err);
+    });
+    // ------------------------ STAIONS_TB 초기화 --------------------------
+    // ------------------------ ERRANDS_TB 초기화 --------------------------
+    await models.ERRANDS_TB.findAndCountAll({logging: false})
+        .then(async result => {
+            if (result.count === 0) {
+                const csvFilePath = '../config/errands_data.csv';
+                csv()
+                    .fromFile(csvFilePath)
+                    .on('end_parsed', async (errands) => {
+                        let stations = await models.STATIONS_TB.findAll({logging: false});
+                        let idxStaion = [];
+                        stations.forEach(station => {
+                            idxStaion.push(station.dataValues);
+                        });
+                        await errands.forEach(errand => {
+                            let idx = idxStaion.find((station) => {
+                                return station.stationName === errand.startStationIdx
+                            });
+                            errand.startStationIdx = idx.stationIdx;
+                            idx = idxStaion.find((station) => {
+                                return station.stationName === errand.arrivalStationIdx
+                            });
+                            errand.arrivalStationIdx = idx.stationIdx;
+                        });
+                        models.ERRANDS_TB.bulkCreate(errands, {logging: false})
+                            .then(() => {
+                                console.log('Errands Data init Complete');
+                            })
+                            .catch((err) => {
+                                console.log(err);
+                            })
+                    });
+            }
+        }).catch(err => {
+        console.log(err);
+    });
+
+    // ------------------------ ERRANDS_TB 초기화 --------------------------
 });
+/**
+ * Create HTTP server.
+ */
+
+const server = http.createServer(app);
 // server.listen(port);
 // server.on('error', onError);
 // server.on('listening', onListening);
@@ -42,19 +113,19 @@ models.sequelize.sync().then(function () {
  */
 
 function normalizePort(val) {
-  const port = parseInt(val, 10);
+    const port = parseInt(val, 10);
 
-  if (isNaN(port)) {
-    // named pipe
-    return val;
-  }
+    if (isNaN(port)) {
+        // named pipe
+        return val;
+    }
 
-  if (port >= 0) {
-    // port number
-    return port;
-  }
+    if (port >= 0) {
+        // port number
+        return port;
+    }
 
-  return false;
+    return false;
 }
 
 /**
@@ -62,27 +133,27 @@ function normalizePort(val) {
  */
 
 function onError(error) {
-  if (error.syscall !== 'listen') {
-    throw error;
-  }
+    if (error.syscall !== 'listen') {
+        throw error;
+    }
 
-  const bind = typeof port === 'string'
-    ? 'Pipe ' + port
-    : 'Port ' + port;
+    const bind = typeof port === 'string'
+        ? 'Pipe ' + port
+        : 'Port ' + port;
 
-  // handle specific listen errors with friendly messages
-  switch (error.code) {
-    case 'EACCES':
-      console.error(bind + ' requires elevated privileges');
-      process.exit(1);
-      break;
-    case 'EADDRINUSE':
-      console.error(bind + ' is already in use');
-      process.exit(1);
-      break;
-    default:
-      throw error;
-  }
+    // handle specific listen errors with friendly messages
+    switch (error.code) {
+        case 'EACCES':
+            console.error(bind + ' requires elevated privileges');
+            process.exit(1);
+            break;
+        case 'EADDRINUSE':
+            console.error(bind + ' is already in use');
+            process.exit(1);
+            break;
+        default:
+            throw error;
+    }
 }
 
 /**
@@ -90,9 +161,9 @@ function onError(error) {
  */
 
 function onListening() {
-  const addr = server.address();
-  const bind = typeof addr === 'string'
-    ? 'pipe ' + addr
-    : 'port ' + addr.port;
-  debug('Listening on ' + bind);
+    const addr = server.address();
+    const bind = typeof addr === 'string'
+        ? 'pipe ' + addr
+        : 'port ' + addr.port;
+    debug('Listening on ' + bind);
 }

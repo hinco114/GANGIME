@@ -5,8 +5,11 @@ const tokenVerify = require('./gangime').tokenVerify;
 const e_models = require('../models/').ERRANDS_TB;
 const c_models = require('../models/').CANCEL_TB;
 const s_models = require('../models/').STARS_TB;
+const errandChats = require('../models/').errandChats;
 
-router.route('/').post(registerErrand);
+router.route('/')
+    .post(registerErrand);
+    // .get(getStationsErrands);
 router.route('/:errandIdx')
     .get(showErrandDetail)
     .put(editErrand);
@@ -15,13 +18,13 @@ router.route('/:errandIdx/star').post(evaluateErrand);
 router.route('/:errandIdx/ask').post(askErrand);
 router.route('/:errandIdx/accept').post(acceptErrand);
 router.route('/:errandIdx/reject').post(rejectErrand);
+router.route('/errands/:errandsIdx/chats').get(getChats);
 
 /* 1. 심부름 등록하기 */
 async function registerErrand(req, res, next) {
     let body = req.body;
     const userIdx = await tokenVerify(req.headers);
 
-    //TODO : DH_내용 누락되는 경우 체크 필요성?
     try {
         let result = await createErrand(body, userIdx);
         resSucc(res, result);
@@ -74,6 +77,26 @@ async function evaluateErrand(req, res, next) {
         let result = await addStars(userIdx, errandIdx, point);
         resSucc(res, result);
     } catch (err) {
+        next(err)
+    }
+}
+
+/* 6. 채팅내용 가져오기 */
+async function getChats(req, res, next) {
+    try {
+        let userIdx = await tokenVerify(req.headers);
+        let errandIdx = req.params.errandsIdx;
+        const errand = await e_models.findById(errandIdx);
+        if (!errand) {
+            throw new Error('Errand not found');
+        }
+        const ret = await errandChats.findById(errand.errandChatId);
+        console.log(ret.chats);
+        resSucc(res, ret['chats']);
+        // let result = await sendNewErrand(body, errandIdx, userIdx);
+        // resSucc(res, result);
+        // res.send({msg: 'success', data: ''});
+    } catch (err) {
         next(err);
     }
 }
@@ -111,6 +134,19 @@ async function rejectErrand(req, res, next) {
     }
 }
 
+// /* 9. 지하철역에 따른 심부름 목록 불러오기*/
+// async function getStationsErrands(req, res, next) {
+//     try {
+//         let startIdx = parseInt(req.query.index) || 1;
+//         let startStation = req.query.start;
+//         let arrivalStation = req.query.arrival;
+//         let order = req.query.order; // order : 시간(등록시간), 금액, 거리
+//         let result = await getErrandList(startIdx, startStation, arrivalStation, order);
+//         resSucc(res, result);
+//     } catch (err) {
+//         next(err);
+//     }
+// }
 
 /* 1_1 DB에 심부름 등록 */
 const createErrand = (body, userIdx) => {
@@ -224,5 +260,25 @@ const addStars = (userIdx, errandIdx, point) => {
     })
 };
 
+// /* 9_1 조건에 맞는 심부록 목록 불러오기 */
+// const getErrandList = (startIdx, startStation, arrivalStation, order) => {
+//     return new Promise((resolve, reject) => {
+//         try {
+//             const result = e_models.findAll({
+//                 offset: startIdx - 1,
+//                 limit: 5,
+//                 where: {startStationIdx: startStation, arrivalStationIdx: arrivalStation},
+//                 // TODO : (DH) arrivalStation 값이 NULL이여도 상관이 없는지 체크
+//                 attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx',
+//                     'itemPrice', 'errandPrice', 'errandStatus']
+//                 // TODO : (DH) boxIdx 체크한 후에 join해서 받아오기
+//                 // TODO : (DH) 시간, 거리, 금액순으로 정렬 설정하기 + 단 '수행중'인 심부름은 항상 상단에 위치
+//         });
+//             resolve(result);
+//         } catch (err) {
+//             reject(err);
+//         }
+//     })
+// };
 
 module.exports = router;

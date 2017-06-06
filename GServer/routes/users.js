@@ -25,6 +25,10 @@ router.route('/boxes')
     .post(storeErrand)
     .delete(deleteBoxItem);
 router.route('/fcm').post(registerFcm);
+router.route('/accounts')
+    .post(addAccount)
+    .put(addAccount);
+// router.route('/histories').get(showHistories);
 
 async function verify(req, res, next) {
     try {
@@ -203,6 +207,13 @@ async function resetPass(req, res, next) {
     }
 }
 
+//TODO: 완성할것
+async function addAccount(req, res, next) {
+    const userIdx = await tokenVerify(req.headers);
+    const body = req.body;
+
+}
+
 const validCode = async (userEmail, code) => {
     let conditions = {
         where: {userEmail: userEmail},
@@ -295,17 +306,31 @@ async function registerFcm(req, res, next) {
 
     try {
         await addFcm(userIdx, fcmToken);
-        // TODO : (DH)) update와 같이 값이 반환되지 않은 경우, result가 없다는 이유로 이렇게 진행해도 될지?
+        // TODO : (DH) update와 같이 반환되는 값이 없는데 단순하게 이렇게 해도 될지?
         resSucc(res, null);
     } catch (err) {
         next(err);
     }
 }
 
+// /* 5. 심부름 내역 보기 */
+// async function showHistories(req, res, next) {
+//     const userIdx = await tokenVerify(req.headers);
+//     let startIdx = parseInt(req.query.index) || 1;
+//     let category = req.query.category;
+//
+//     try {
+//         let result = await getAllHistories(userIdx, startIdx, category);
+//         resSucc(res, result);
+//     } catch (err) {
+//         next(err);
+//     }
+// }
+
 /* 1_1 선택한 심부름 찜하기 */
 const putIntoBox = (userIdx, errandIdx) => {
     return new Promise(async (resolve, reject) => {
-        // TODO : (DH) await 비동기식으로 다시 변경하기
+        // TODO : (DH) async-await식으로 다시 변경하기
         const chkExist = await b_models.findOne({
             where: {userIdx: userIdx, errandIdx: errandIdx}
         }).then((chkExist) => {
@@ -363,13 +388,38 @@ const deleteErrand = (userIdx, errandIdx) => {
 /* 4_1 FCM 토큰 정보 저장하기 */
 const addFcm = (userIdx, fcmToken) => {
     return new Promise((resolve, reject) => {
-        try{
+        try {
             const result = Users.update({fcmToken: fcmToken}, {where: {userIdx: userIdx}});
             resolve(result);
-        }catch(err){
+        } catch (err) {
             reject(err);
         }
     })
-}
+};
+
+// /* 5_1 수행 또는 요청 심부름 내역 가져오기 */
+// const getAllHistories = (userIdx, startIdx, category) => {
+//     // '진행중' 상태가 가장 맨 위로 보여지기
+//     return new Promise((resolve, reject) => {
+//         // TODO : (DH) 요청, 수행인 경우 상태 입력하기 + 유저 아이디
+//         let request = {errandStatus: '진행중'};
+//         let execute = {errandStatus: errandIdx};
+//         let body = (category === "수행") ? request : execute;
+//
+//         try {
+//             const result = e_models.findAll({
+//                 offset: startIdx - 1,
+//                 limit: 5,
+//                 where: body,
+//                 attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx',
+//                     'deadlineDt', 'itemPrice', 'errandPrice', 'errandStatus']
+//                 // TODO : (DH) '진행중'인 심부름을 제외하고는 updatedAt 순서대로 정렬하기
+//             });
+//             resolve(result);
+//         } catch (err) {
+//             reject(err);
+//         }
+//     })
+// };
 
 module.exports = router;
