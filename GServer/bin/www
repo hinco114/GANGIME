@@ -28,7 +28,7 @@ models.sequelize.sync().then(async () => {
     console.log('Sync complete');
     const csv = require('csvtojson');
     // ------------------------ STAIONS_TB 초기화 --------------------------
-    await models.STATIONS_TB.findAndCountAll()
+    await models.STATIONS_TB.findAndCountAll({logging: false})
         .then(result => {
             if (result.count === 0) {
                 let data = [];
@@ -62,14 +62,14 @@ models.sequelize.sync().then(async () => {
     });
     // ------------------------ STAIONS_TB 초기화 --------------------------
     // ------------------------ ERRANDS_TB 초기화 --------------------------
-    await models.ERRANDS_TB.findAndCountAll()
+    await models.ERRANDS_TB.findAndCountAll({logging: false})
         .then(async result => {
             if (result.count === 0) {
                 const csvFilePath = '../config/errands_data.csv';
                 csv()
                     .fromFile(csvFilePath)
                     .on('end_parsed', async (errands) => {
-                        let stations = await models.STATIONS_TB.findAll();
+                        let stations = await models.STATIONS_TB.findAll({logging: false});
                         let idxStaion = [];
                         stations.forEach(station => {
                             idxStaion.push(station.dataValues);
