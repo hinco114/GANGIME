@@ -12,6 +12,9 @@ router.route('/:errandIdx')
     .put(editErrand);
 router.route('/:errandIdx/cancel').post(requestCancel);
 router.route('/:errandIdx/star').post(evaluateErrand);
+router.route('/:errandIdx/ask').post(askErrand);
+router.route('/:errandIdx/accept').post(acceptErrand);
+router.route('/:errandIdx/reject').post(rejectErrand);
 
 /* 1. 심부름 등록하기 */
 async function registerErrand(req, res, next) {
@@ -74,6 +77,40 @@ async function evaluateErrand(req, res, next) {
         next(err);
     }
 }
+
+/* 6. 심부름 수행 요청 */
+async function askErrand(req, res, next) {
+    try {
+        let userIdx = await tokenVerify(req.headers);
+        let result = await addStars(userIdx, errandIdx, point);
+        resSucc(res, result);
+    } catch (err) {
+        next(err);
+    }
+}
+
+/* 7. 심부름 요청 승낙 */
+async function acceptErrand(req, res, next) {
+    try {
+        let userIdx = await tokenVerify(req.headers);
+        let result = await addStars(userIdx, errandIdx, point);
+        resSucc(res, result);
+    } catch (err) {
+        next(err);
+    }
+}
+
+/* 8. 심부름 요청 거절 */
+async function rejectErrand(req, res, next) {
+    try {
+        let userIdx = await tokenVerify(req.headers);
+        let result = await addStars(userIdx, errandIdx, point);
+        resSucc(res, result);
+    } catch (err) {
+        next(err);
+    }
+}
+
 
 /* 1_1 DB에 심부름 등록 */
 const createErrand = (body, userIdx) => {
