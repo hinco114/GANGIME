@@ -10,8 +10,8 @@ router.route('/').post(reportUser);
 async function reportUser(req, res, next) {
     let errandIdx = req.body.errandIdx;
     let reportContent = req.body.reportContent;
-    const userIdx = await tokenVerify(req.headers);
-
+    const decode = await tokenVerify(req.headers);
+    const userIdx = decode.userIdx;
     if (!errandIdx || !reportContent) {
         throw new Error("내용 누락");
     }

@@ -18,13 +18,15 @@ router.route('/:errandIdx/star').post(evaluateErrand);
 router.route('/:errandIdx/ask').post(askErrand);
 router.route('/:errandIdx/accept').post(acceptErrand);
 router.route('/:errandIdx/reject').post(rejectErrand);
-router.route('/errands/:errandsIdx/chats').get(getChats);
+router.route('/:errandIdx/chats').get(getChats);
+router.route('/:errandIdx/accept').post(acceptErrand);
 
 /* 1. 심부름 등록하기 */
 async function registerErrand(req, res, next) {
     let body = req.body;
-    const userIdx = await tokenVerify(req.headers);
-
+    const decode = await tokenVerify(req.headers);
+    const userIdx = decode.userIdx;
+    //TODO : DH_내용 누락되는 경우 체크 필요성?
     try {
         let result = await createErrand(body, userIdx);
         resSucc(res, result);
@@ -47,7 +49,8 @@ async function editErrand(req, res, next) {
     try {
         let body = req.body;
         let errandIdx = req.params.errandIdx;
-        let userIdx = await tokenVerify(req.headers);
+        let decode = await tokenVerify(req.headers);
+        const userIdx = decode.userIdx;
         await sendNewErrand(body, errandIdx, userIdx);
         resSucc(res, null);
     } catch (err) {
@@ -58,7 +61,8 @@ async function editErrand(req, res, next) {
 /* 4. 상대방에게 심부름 취소 요청하기 */
 async function requestCancel(req, res, next) {
     try {
-        let userIdx = await tokenVerify(req.headers);
+        let decode = await tokenVerify(req.headers);
+        const userIdx = decode.userIdx;
         let errandIdx = req.params.errandIdx;
         let reason = req.body.cancelReason;
         let result = await registerCancel(userIdx, errandIdx, reason);
@@ -71,7 +75,8 @@ async function requestCancel(req, res, next) {
 /* 5. 심부름 평가하기  */
 async function evaluateErrand(req, res, next) {
     try {
-        let userIdx = await tokenVerify(req.headers);
+        let decode = await tokenVerify(req.headers);
+        const userIdx = decode.userIdx;
         let errandIdx = req.params.errandIdx;
         let point = parseInt(req.body.stars);
         let result = await addStars(userIdx, errandIdx, point);
@@ -84,18 +89,21 @@ async function evaluateErrand(req, res, next) {
 /* 6. 채팅내용 가져오기 */
 async function getChats(req, res, next) {
     try {
-        let userIdx = await tokenVerify(req.headers);
-        let errandIdx = req.params.errandsIdx;
+        const decode = await tokenVerify(req.headers);
+        const userIdx = decode.uesrIdx;
+        const userNickname = decode.userNickname;
+        let errandIdx = req.params.errandIdx;
         const errand = await e_models.findById(errandIdx);
         if (!errand) {
             throw new Error('Errand not found');
         }
         const ret = await errandChats.findById(errand.errandChatId);
-        console.log(ret.chats);
-        resSucc(res, ret['chats']);
-        // let result = await sendNewErrand(body, errandIdx, userIdx);
-        // resSucc(res, result);
-        // res.send({msg: 'success', data: ''});
+        if (ret.chats.length == 0) {
+            resSucc(res, null);
+            return;
+        }
+        resSucc(res, ret);
+        // res.send({msg: 'success', data: ret.chats});
     } catch (err) {
         next(err);
     }
@@ -115,8 +123,17 @@ async function askErrand(req, res, next) {
 /* 7. 심부름 요청 승낙 */
 async function acceptErrand(req, res, next) {
     try {
-        let userIdx = await tokenVerify(req.headers);
-        let result = await addStars(userIdx, errandIdx, point);
+        const decode = await tokenVerify(req.headers);
+        let result = await e_models.findById(req.params.errandIdx);
+        const creation = {
+            errandIdx: result.dataValues.errandIdx,
+            executorIdx: result.dataValues.executorIdx,
+            requesterIdx: result.dataValues.requesterIdx,
+        };
+        const newChat = await errandChats.create(creation);
+        result.errandStatus = '수행중';
+        result.errandChatId = newChat._id.toString();
+        result.save();
         resSucc(res, result);
     } catch (err) {
         next(err);

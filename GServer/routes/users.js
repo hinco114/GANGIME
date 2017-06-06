@@ -104,7 +104,8 @@ async function signUp(req, res, next) {
 
 async function getUserInfo(req, res, next) {
     try {
-        const userIdx = await tokenVerify(req.headers);
+        const decode = await tokenVerify(req.headers);
+        const userIdx = decode.userIdx;
         let conditions = {
             where: {userIdx: userIdx},
             attributes: ['userEmail', 'userNickname', 'userBirthday', 'userPhone', 'userDepositor', 'userAccount']
@@ -118,7 +119,8 @@ async function getUserInfo(req, res, next) {
 
 async function modifyUser(req, res, next) {
     try {
-        const userIdx = await tokenVerify(req.headers);
+        const decode = await tokenVerify(req.headers);
+        const userIdx = decode.userIdx;
         let conditions = req.body;
         if (!conditions.userPassword) {
             throw new Error('Password required');
@@ -141,7 +143,8 @@ async function modifyUser(req, res, next) {
 
 async function deleteUser(req, res, next) {
     try {
-        const userIdx = await tokenVerify(req.headers);
+        const decode = await tokenVerify(req.headers);
+        const userIdx = decode.userIdx;
         let conditions = {
             where: {userIdx: userIdx}
         };
@@ -209,7 +212,7 @@ async function resetPass(req, res, next) {
 
 //TODO: 완성할것
 async function addAccount(req, res, next) {
-    const userIdx = await tokenVerify(req.headers);
+    const decode = await tokenVerify(req.headers);
     const body = req.body;
 
 }
@@ -261,7 +264,8 @@ const addCode = (email, code) => {
 //////////////////////////////////////////////////////////////////////////////
 /* 1. 심부름 찜하기 */
 async function storeErrand(req, res, next) {
-    const userIdx = await tokenVerify(req.headers);
+    const decode = await tokenVerify(req.headers);
+    const userIdx = decode.userIdx;
     let errandIdx = req.body.errandIdx;
 
     try {
@@ -276,8 +280,8 @@ async function storeErrand(req, res, next) {
 async function getBoxList(req, res, next) {
     let startIdx = parseInt(req.query.index) || 1;
     let endIdx = startIdx + 2;
-    const userIdx = await tokenVerify(req.headers);
-
+    const decode = await tokenVerify(req.headers);
+    const userIdx = decode.userIdx;
     try {
         let result = await findBoxes(startIdx, endIdx, userIdx);
         resSucc(res, result);
@@ -288,7 +292,8 @@ async function getBoxList(req, res, next) {
 
 /* 3. 심부름 찜한 목록 삭제하기 */
 async function deleteBoxItem(req, res, next) {
-    const userIdx = await tokenVerify(req.headers);
+    const decode = await tokenVerify(req.headers);
+    const userIdx = decode.userIdx;
     let errandIdx = req.body.errandIdx;
 
     try {
