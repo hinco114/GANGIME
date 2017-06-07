@@ -28,7 +28,7 @@ router.route('/fcm').post(registerFcm);
 router.route('/accounts')
     .post(addAccount)
     .put(addAccount);
-// router.route('/histories').get(showHistories);
+router.route('/histories').get(showHistories);
 
 async function verify(req, res, next) {
     try {
@@ -318,19 +318,19 @@ async function registerFcm(req, res, next) {
     }
 }
 
-// /* 5. 심부름 내역 보기 */
-// async function showHistories(req, res, next) {
-//     const userIdx = await tokenVerify(req.headers);
-//     let startIdx = parseInt(req.query.index) || 1;
-//     let category = req.query.category;
-//
-//     try {
-//         let result = await getAllHistories(userIdx, startIdx, category);
-//         resSucc(res, result);
-//     } catch (err) {
-//         next(err);
-//     }
-// }
+/* 5. 심부름 내역 보기 */
+async function showHistories(req, res, next) {
+    const token = await tokenVerify(req.headers);
+    let startIdx = parseInt(req.query.index) - 1 || 0;
+    let category = req.query.category;
+
+    try {
+        let result = await getAllHistories(token, startIdx, category);
+        res.send({msg: 'success', data: result});
+    } catch (err) {
+        next(err);
+    }
+}
 
 /* 1_1 선택한 심부름 찜하기 */
 const putIntoBox = (userIdx, errandIdx) => {
@@ -402,29 +402,27 @@ const addFcm = (userIdx, fcmToken) => {
     })
 };
 
-// /* 5_1 수행 또는 요청 심부름 내역 가져오기 */
-// const getAllHistories = (userIdx, startIdx, category) => {
-//     // '진행중' 상태가 가장 맨 위로 보여지기
-//     return new Promise((resolve, reject) => {
-//         // TODO : (DH) 요청, 수행인 경우 상태 입력하기 + 유저 아이디
-//         let request = {errandStatus: '진행중'};
-//         let execute = {errandStatus: errandIdx};
-//         let body = (category === "수행") ? request : execute;
-//
-//         try {
-//             const result = e_models.findAll({
-//                 offset: startIdx - 1,
-//                 limit: 5,
-//                 where: body,
-//                 attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx',
-//                     'deadlineDt', 'itemPrice', 'errandPrice', 'errandStatus']
-//                 // TODO : (DH) '진행중'인 심부름을 제외하고는 updatedAt 순서대로 정렬하기
-//             });
-//             resolve(result);
-//         } catch (err) {
-//             reject(err);
-//         }
-//     })
-// };
+/* 5_1 수행 또는 요청 심부름 내역 가져오기 */
+const getAllHistories = (token, startIdx, category) => {
+    return new Promise((resolve, reject) => {
+        let user = token.userIdx;
+        let requester = "requesterIdx = " + user;
+        let executor = "executorIdx = " + user;
+        let role = null;
+        if (category === "수행") {
+            role = executor;
+        } else if (category === "요청") {
+            role = requester;
+        }
+        try {
+            const result = e_models.sequelize.query("SELECT errandIdx, errandTitle, startStationIdx, arrivalStationIdx, deadlineDt, itemPrice, errandPrice, errandStatus, createdAt " +
+                "FROM errands_tb WHERE " + role + " ORDER BY CASE WHEN errandStatus='수행중' THEN 1 ELSE 2 END, createdAt DESC LIMIT 10 OFFSET " + startIdx).spread((res, metadata) => {
+                resolve(res);
+            });
+        } catch (err) {
+            reject(err);
+        }
+    })
+};
 
 module.exports = router;
