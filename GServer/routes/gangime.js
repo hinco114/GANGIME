@@ -6,7 +6,13 @@ const resSucc = (res, data) => {
     let resultModel = {
         msg: 'success'
     };
-    if (Array.isArray(data)) {
+    if (data.chats) {
+        resultModel.total = data.chats.length;
+        resultModel.index = {
+            start: data.start,
+            end: data.end
+        }
+    } else if (Array.isArray(data)) {
         resultModel.total = data.length;
         const idxName = Object.keys(data[0].dataValues)[0];
         resultModel.index = {

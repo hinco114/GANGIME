@@ -9,7 +9,7 @@ const errandChats = require('../models/').errandChats;
 
 router.route('/')
     .post(registerErrand);
-    // .get(getStationsErrands);
+// .get(getStationsErrands);
 router.route('/:errandIdx')
     .get(showErrandDetail)
     .put(editErrand);
@@ -18,7 +18,9 @@ router.route('/:errandIdx/star').post(evaluateErrand);
 router.route('/:errandIdx/ask').post(askErrand);
 router.route('/:errandIdx/accept').post(acceptErrand);
 router.route('/:errandIdx/reject').post(rejectErrand);
-router.route('/:errandIdx/chats').get(getChats);
+router.route('/:errandIdx/chats')
+    .post(addChats)
+    .get(getChats);
 router.route('/:errandIdx/accept').post(acceptErrand);
 
 /* 1. 심부름 등록하기 */
@@ -97,13 +99,17 @@ async function getChats(req, res, next) {
         if (!errand) {
             throw new Error('Errand not found');
         }
-        const ret = await errandChats.findById(errand.errandChatId);
+        let ret = await errandChats.findOne({_id: errand.errandChatId}, 'chats');
+        let index = req.query.index > 1 ? req.query.index - 1 : 0;
+        ret.chats = ret.chats.slice(index, index + 50);
+        delete ret._id;
+        ret.start = index;
+        ret.end = ret.chats.length;
         if (ret.chats.length == 0) {
             resSucc(res, null);
             return;
         }
         resSucc(res, ret);
-        // res.send({msg: 'success', data: ret.chats});
     } catch (err) {
         next(err);
     }
@@ -164,6 +170,28 @@ async function rejectErrand(req, res, next) {
 //         next(err);
 //     }
 // }
+
+async function addChats(req, res, next) {
+    try {
+        const decode = await tokenVerify(req.headers);
+        const userIdx = decode.userIdx;
+        let errandIdx = req.params.errandIdx;
+        const errand = await e_models.findById(errandIdx);
+        if (!errand) {
+            throw new Error('Errand not found');
+        }
+        let result = await errandChats.findById(errand.errandChatId);
+        let newChat = {
+            sender: userIdx,
+            message: req.body.chat
+        };
+        result.chats.push(newChat);
+        result.save();
+        resSucc(res, result);
+    } catch (err) {
+        next(err);
+    }
+}
 
 /* 1_1 DB에 심부름 등록 */
 const createErrand = (body, userIdx) => {
