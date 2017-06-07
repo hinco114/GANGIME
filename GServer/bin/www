@@ -31,7 +31,7 @@ models.sequelize.sync().then(async () => {
     await models.BANKS_TB.findAndCountAll({logging: false})
         .then(result => {
             if (result.count === 0) {
-                const csvFilePath = '../config/banks_data.csv';
+                const csvFilePath = __dirname + '/../config/banks_data.csv';
                 csv()
                     .fromFile(csvFilePath)
                     .on('end_parsed', (users) => {
@@ -48,7 +48,7 @@ models.sequelize.sync().then(async () => {
     await models.USERS_TB.findAndCountAll({logging: false})
         .then(result => {
             if (result.count === 0) {
-                const csvFilePath = '../config/users_data.csv';
+                const csvFilePath = __dirname + '/../config/users_data.csv';
                 csv()
                     .fromFile(csvFilePath)
                     .on('end_parsed', (users) => {
@@ -66,7 +66,7 @@ models.sequelize.sync().then(async () => {
         .then(result => {
             if (result.count === 0) {
                 let data = [];
-                const csvFilePath = '../config/stations_data.csv';
+                const csvFilePath = __dirname + '/../config/stations_data.csv';
                 csv()
                     .fromFile(csvFilePath)
                     .on('json', parsed => {
@@ -99,7 +99,7 @@ models.sequelize.sync().then(async () => {
     await models.ERRANDS_TB.findAndCountAll({logging: false})
         .then(async result => {
             if (result.count === 0) {
-                const csvFilePath = '../config/errands_data.csv';
+                const csvFilePath = __dirname + '/../config/errands_data.csv';
                 csv()
                     .fromFile(csvFilePath)
                     .on('end_parsed', async (errands) => {
