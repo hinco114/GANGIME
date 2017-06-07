@@ -9,8 +9,9 @@ module.exports = (sequelize, DataTypes) => {
         userNickname: {type: DataTypes.STRING(10), allowNull: false, unique: true},
         userBirthday: {type: DataTypes.DATEONLY, allowNull: false},
         userPhone: {type: DataTypes.STRING(15), allowNull: false, unique: true},
-        userAccount: {type: DataTypes.STRING(30), unique: true},
         userBankIdx: {type: DataTypes.INTEGER}, //references: {model: 'BANKS_TB', key: 'userBankIdx'}},
+        userAccount: {type: DataTypes.STRING(30)},
+        userAccountName: {type: DataTypes.STRING(10)},
         userStarAvg: {type: DataTypes.INTEGER},
         userDepositor: {type: DataTypes.STRING},
         profilePicture: {type: DataTypes.STRING, isUrl: true},
@@ -22,7 +23,7 @@ module.exports = (sequelize, DataTypes) => {
         comment: '회원 정보 테이블',
         classMethods: {
             associate: models => {
-                models.BANKS_TB.hasMany(users_tb, {foreignKey: 'userBankIdx'})
+                models.BANKS_TB.hasOne(users_tb, {foreignKey: 'userBankIdx'})
             }
         }
     });

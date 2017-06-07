@@ -27,6 +27,40 @@ models.sequelize.sync().then(async () => {
     server.on('listening', onListening);
     console.log('Sync complete');
     const csv = require('csvtojson');
+    // ------------------------ BANKS_TB 초기화 --------------------------
+    await models.BANKS_TB.findAndCountAll({logging: false})
+        .then(result => {
+            if (result.count === 0) {
+                const csvFilePath = '../config/banks_data.csv';
+                csv()
+                    .fromFile(csvFilePath)
+                    .on('end_parsed', (users) => {
+                        models.BANKS_TB.bulkCreate(users,{logging: false})
+                            .catch(err => {
+                                console.log('This is err : ', err)
+                            });
+                        console.log('Bank Data init Complete');
+                    })
+            }
+        });
+    // ------------------------ BANKS_TB 초기화 --------------------------
+    // ------------------------ USERS_TB 초기화 --------------------------
+    await models.USERS_TB.findAndCountAll({logging: false})
+        .then(result => {
+            if (result.count === 0) {
+                const csvFilePath = '../config/users_data.csv';
+                csv()
+                    .fromFile(csvFilePath)
+                    .on('end_parsed', (users) => {
+                        models.USERS_TB.bulkCreate(users,{logging: false})
+                            .catch(err => {
+                                console.log('USER ERROR : ', err)
+                            });
+                        console.log('User Data init Complete');
+                    })
+            }
+        });
+    // ------------------------ USERS_TB 초기화 --------------------------
     // ------------------------ STAIONS_TB 초기화 --------------------------
     await models.STATIONS_TB.findAndCountAll({logging: false})
         .then(result => {
