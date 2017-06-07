@@ -163,7 +163,7 @@ async function signIn(req, res, next) {
         const body = req.body;
         let conditions = {
             where: {userEmail: body.userEmail},
-            attributes: ['userIdx', 'userPassword']
+            attributes: ['userIdx', 'userNickname', 'userPassword']
         };
         // Find user
         let result = await Users.findOne(conditions);
@@ -174,7 +174,7 @@ async function signIn(req, res, next) {
         // Password matching
         await matchPass(result.userIdx, body.userPassword);
         // Create Token
-        const token = await createToken(result.userIdx);
+        const token = await createToken(result.userIdx, result.userNickname);
         resSucc(res, {token: token});
     } catch (err) {
         next(err);

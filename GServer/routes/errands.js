@@ -5,6 +5,7 @@ const tokenVerify = require('./gangime').tokenVerify;
 const e_models = require('../models/').ERRANDS_TB;
 const c_models = require('../models/').CANCEL_TB;
 const s_models = require('../models/').STARS_TB;
+const u_models = require('../models/').USERS_TB;
 const errandChats = require('../models/').errandChats;
 
 router.route('/')
@@ -92,24 +93,31 @@ async function evaluateErrand(req, res, next) {
 async function getChats(req, res, next) {
     try {
         const decode = await tokenVerify(req.headers);
-        const userIdx = decode.uesrIdx;
+        const userIdx = decode.userIdx;
         const userNickname = decode.userNickname;
         let errandIdx = req.params.errandIdx;
         const errand = await e_models.findById(errandIdx);
         if (!errand) {
             throw new Error('Errand not found');
         }
-        let ret = await errandChats.findOne({_id: errand.errandChatId}, 'chats');
-        let index = req.query.index > 1 ? req.query.index - 1 : 0;
-        ret.chats = ret.chats.slice(index, index + 50);
-        delete ret._id;
-        ret.start = index;
-        ret.end = ret.chats.length;
-        if (ret.chats.length == 0) {
+        if (!errand.errandChatId) {
+            throw new Error('Chat room not Exist');
+        }
+        let errandChat = await errandChats.findById(errand.errandChatId);
+        if (!errandChat || errandChat.chats.length == 0) {
             resSucc(res, null);
             return;
         }
-        resSucc(res, ret);
+        let opponent = errandChat.requesterIdx == userIdx ? errandChat.executorIdx : errandChat.requesterIdx;
+        let index = req.query.index > 1 ? req.query.index - 1 : 0;
+        let data = {};
+        data.start = index + 1;
+        data.end = index + errandChat.chats.length;
+        let user = await u_models.findById(opponent);
+        data.myNickname = userNickname;
+        data.opponentNickname = user.userNickname;
+        data.chats = errandChat.chats.slice(index, index + 50);
+        resSucc(res, data);
     } catch (err) {
         next(err);
     }

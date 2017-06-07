@@ -6,12 +6,14 @@ const resSucc = (res, data) => {
     let resultModel = {
         msg: 'success'
     };
-    if (data.chats) {
+    if (data && data.chats) {
         resultModel.total = data.chats.length;
         resultModel.index = {
             start: data.start,
             end: data.end
-        }
+        };
+        delete data.start;
+        delete data.end;
     } else if (Array.isArray(data)) {
         resultModel.total = data.length;
         const idxName = Object.keys(data[0].dataValues)[0];
