@@ -405,24 +405,27 @@ const addFcm = (userIdx, fcmToken) => {
 /* 5_1 수행 또는 요청 심부름 내역 가져오기 */
 const getAllHistories = (token, startIdx, category) => {
     return new Promise((resolve, reject) => {
-        let user = token.userIdx;
-        let requester = "requesterIdx = " + user;
-        let executor = "executorIdx = " + user;
-        let role = null;
-        if (category === "수행") {
-            role = executor;
-        } else if (category === "요청") {
-            role = requester;
+            let user = token.userIdx;
+            let requester = "requesterIdx = " + user;
+            let executor = "executorIdx = " + user;
+
+            let role = null;
+            if (category === "수행") {
+                role = executor;
+            } else if (category === "요청") {
+                role = requester;
+            }
+
+            try {
+                const result = e_models.sequelize.query("SELECT errandIdx, errandTitle, startStationIdx, arrivalStationIdx, deadlineDt, itemPrice, errandPrice, errandStatus " +
+                    "FROM errands_tb WHERE " + role + " ORDER BY CASE WHEN errandStatus='수행중' THEN 1 ELSE 2 END, createdAt DESC LIMIT 10 OFFSET " + startIdx).spread((res, metadata) => {
+                    resolve(res);
+                });
+            } catch (err) {
+                reject(err);
+            }
         }
-        try {
-            const result = e_models.sequelize.query("SELECT errandIdx, errandTitle, startStationIdx, arrivalStationIdx, deadlineDt, itemPrice, errandPrice, errandStatus, createdAt " +
-                "FROM errands_tb WHERE " + role + " ORDER BY CASE WHEN errandStatus='수행중' THEN 1 ELSE 2 END, createdAt DESC LIMIT 10 OFFSET " + startIdx).spread((res, metadata) => {
-                resolve(res);
-            });
-        } catch (err) {
-            reject(err);
-        }
-    })
+    )
 };
 
 module.exports = router;

@@ -5,11 +5,13 @@ const tokenVerify = require('./gangime').tokenVerify;
 const e_models = require('../models/').ERRANDS_TB;
 const c_models = require('../models/').CANCEL_TB;
 const s_models = require('../models/').STARS_TB;
+const b_models = require('../models/').BOXES_TB;
 const errandChats = require('../models/').errandChats;
+const objectAssign = require('object-assign');
 
 router.route('/')
-    .post(registerErrand);
-// .get(getStationsErrands);
+    .post(registerErrand)
+    .get(getStationsErrands);
 router.route('/:errandIdx')
     .get(showErrandDetail)
     .put(editErrand);
@@ -157,19 +159,19 @@ async function rejectErrand(req, res, next) {
     }
 }
 
-// /* 9. 지하철역에 따른 심부름 목록 불러오기*/
-// async function getStationsErrands(req, res, next) {
-//     try {
-//         let startIdx = parseInt(req.query.index) || 1;
-//         let startStation = req.query.start;
-//         let arrivalStation = req.query.arrival;
-//         let order = req.query.order; // order : 시간(등록시간), 금액, 거리
-//         let result = await getErrandList(startIdx, startStation, arrivalStation, order);
-//         resSucc(res, result);
-//     } catch (err) {
-//         next(err);
-//     }
-// }
+/* 9. 지하철역에 따른 심부름 목록 불러오기*/
+async function getStationsErrands(req, res, next) {
+    try {
+        let startIdx = parseInt(req.query.index) - 1 || 0;
+        let startStation = req.query.start;
+        let arrivalStation = req.query.arrival;
+        let order = req.query.order; // order : 시간(등록시간), 금액, 거리
+        let result = await getErrandList(startIdx, startStation, arrivalStation, order);
+        resSucc(res, result);
+    } catch (err) {
+        next(err);
+    }
+}
 
 async function addChats(req, res, next) {
     try {
@@ -305,25 +307,29 @@ const addStars = (userIdx, errandIdx, point) => {
     })
 };
 
-// /* 9_1 조건에 맞는 심부록 목록 불러오기 */
-// const getErrandList = (startIdx, startStation, arrivalStation, order) => {
-//     return new Promise((resolve, reject) => {
-//         try {
-//             const result = e_models.findAll({
-//                 offset: startIdx - 1,
-//                 limit: 5,
-//                 where: {startStationIdx: startStation, arrivalStationIdx: arrivalStation},
-//                 // TODO : (DH) arrivalStation 값이 NULL이여도 상관이 없는지 체크
-//                 attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx',
-//                     'itemPrice', 'errandPrice', 'errandStatus']
-//                 // TODO : (DH) boxIdx 체크한 후에 join해서 받아오기
-//                 // TODO : (DH) 시간, 거리, 금액순으로 정렬 설정하기 + 단 '수행중'인 심부름은 항상 상단에 위치
-//         });
-//             resolve(result);
-//         } catch (err) {
-//             reject(err);
-//         }
-//     })
-// };
+/* 9_1 조건에 맞는 심부록 목록 불러오기 */
+const getErrandList = (startIdx, startStation, arrivalStation, order) => {
+    return new Promise(async (resolve, reject) => {
+        // TODO : (DH) 페이지네이션 제대로 설정하기
+        const doingResult = await e_models.findAll({ // TODO : (DH) 수행중인 심부름는 유저가 요청자 또는 수행자여야만 한다
+            include: [{model: b_models, attributes: ['boxIdx']}], // TODO : (DH) 가능하면 count 또는 T/F(EXISTS)
+            where: {startStationIdx: startStation, arrivalStationIdx: arrivalStation, errandStatus: '수행중'},
+            // TODO : (DH) arrivalStation 값이 NULL인 경우?
+            attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx',
+                'itemPrice', 'errandPrice', 'errandStatus']
+        });
+
+        const restResult = await e_models.findAll({
+            include: [{model: b_models, attributes: ['boxIdx']}], // TODO : (DH) 가능하면 count 또는 T/F로 변경하기
+            where: {startStationIdx: startStation, arrivalStationIdx: arrivalStation, errandStatus: {$ne: '수행중'}},
+            // TODO : (DH) arrivalStation 값이 NULL인 경우
+            attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx',
+                'itemPrice', 'errandPrice', 'errandStatus'],
+            order: [['createdAt', 'DESC']] // TODO : (DH) 시간, 거리, 금액순으로 정렬 설정하기
+        });
+        let result = await doingResult.concat(restResult);
+        resolve(result);
+    })
+};
 
 module.exports = router;
