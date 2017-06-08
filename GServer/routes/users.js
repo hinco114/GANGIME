@@ -418,7 +418,7 @@ const getAllHistories = (token, startIdx, category) => {
 
             try {
                 const result = e_models.sequelize.query("SELECT errandIdx, errandTitle, startStationIdx, arrivalStationIdx, deadlineDt, itemPrice, errandPrice, errandStatus " +
-                    "FROM errands_tb WHERE " + role + " ORDER BY CASE WHEN errandStatus='수행중' THEN 1 ELSE 2 END, createdAt DESC LIMIT 10 OFFSET " + startIdx).spread((res, metadata) => {
+                    "FROM ERRANDS_TB WHERE " + role + " ORDER BY CASE WHEN errandStatus='수행중' THEN 1 ELSE 2 END, createdAt DESC LIMIT 10 OFFSET " + startIdx).spread((res, metadata) => {
                     resolve(res);
                 });
             } catch (err) {

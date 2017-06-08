@@ -86,7 +86,7 @@ async function evaluateErrand(req, res, next) {
         let result = await addStars(userIdx, errandIdx, point);
         resSucc(res, result);
     } catch (err) {
-        next(err)
+        next(err);
     }
 }
 
@@ -320,13 +320,13 @@ const getErrandList = (token, startIdx, startStation, arrivalStation, order) => 
         let user = token.userIdx;
         let both = {startStationIdx: startStation, arrivalStationIdx: arrivalStation};
         let only = {startStationIdx: startStation};
-        let stations = (!arrivalStation)? only : both;
+        let stations = (!arrivalStation) ? only : both;
         let selectOrder = null;
-        if(order === '시간'){
+        if (order === 'time') {
             selectOrder = 'createdAt';
-        }else if(order === '거리'){
+        } else if (order === 'distance') {
             selectOrder = 'stationDistance';
-        }else if(order === '금액'){
+        } else if (order === 'price') {
             selectOrder = 'errandPrice';
         }
 
@@ -344,8 +344,9 @@ const getErrandList = (token, startIdx, startStation, arrivalStation, order) => 
                 'itemPrice', 'errandPrice', 'errandStatus'],
             order: [[selectOrder, 'DESC']]
         });
+        console.log(doingResult);
 
-        // TODO : (DH) 페이지네이션 제대로 설정하기
+        // TODO : (DH) 페이지네이션 제대로 설정하기 => slice 사용(6번. 채팅 참고하기)
         let result = await doingResult.concat(restResult);
         resolve(result);
     })
