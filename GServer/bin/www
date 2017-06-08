@@ -20,118 +20,149 @@ app.set('port', port);
 /**
  * Listen on provided port, on all network interfaces.
  */
+
+function initBank() {
+    return new Promise((resolve, reject) => {
+        models.BANKS_TB.findAndCountAll({logging: false})
+            .then(result => {
+                if (result.count === 0) {
+                    const csv = require('csvtojson');
+                    const csvFilePath = __dirname + '/../config/banks_data.csv';
+                    csv()
+                        .fromFile(csvFilePath)
+                        .on('end_parsed', (users) => {
+                            models.BANKS_TB.bulkCreate(users,{logging: false})
+                                .catch(err => {
+                                    console.log('This is err : ', err);
+                                    reject(err);
+                                });
+                            console.log('Bank Data init Complete');
+                            resolve();
+                        })
+                }
+            });
+    })
+}
+
+function initUser() {
+    return new Promise((resolve, reject) => {
+        models.USERS_TB.findAndCountAll({logging: false})
+            .then(result => {
+                if (result.count === 0) {
+                    const csv = require('csvtojson');
+                    const csvFilePath = __dirname + '/../config/users_data.csv';
+                    csv()
+                        .fromFile(csvFilePath)
+                        .on('end_parsed', (users) => {
+                            models.USERS_TB.bulkCreate(users,{logging: false})
+                                .catch(err => {
+                                    console.log('USER ERROR : ', err);
+                                    reject(err)
+                                });
+                            console.log('User Data init Complete');
+                            resolve();
+                        })
+                }
+            });
+    })
+}
+
+function initStation() {
+    return new Promise((resolve, reject) => {
+        models.STATIONS_TB.findAndCountAll({logging: false})
+            .then(result => {
+                if (result.count === 0) {
+                    let data = [];
+                    const csv = require('csvtojson');
+                    const csvFilePath = __dirname + '/../config/stations_data.csv';
+                    csv()
+                        .fromFile(csvFilePath)
+                        .on('json', parsed => {
+                            if (!data.find(station => {
+                                    return station.stationName === parsed.이름
+                                })) {
+                                if (parsed.이름 && parsed.X && parsed.Y) {
+                                    let newStation = {};
+                                    newStation.stationName = parsed.이름;
+                                    newStation.stationLocation = {type: 'Point', coordinates: [parsed.X, parsed.Y]};
+                                    data.push(newStation);
+                                }
+                            }
+                        })
+                        .on('end_parsed', () => {
+                            models.STATIONS_TB.bulkCreate(data,{logging: false})
+                                .then(() => {
+                                    console.log('Station Data init Complete');
+                                    resolve();
+                                }).catch((err) => {
+                                console.log('THE ERROR : ' + err);
+                                reject(err);
+                            })
+                        });
+                }
+
+            }).catch(err => {
+                console.log(err);
+            });
+    })
+}
+
+function initErrand() {
+    return new Promise((resolve, reject) => {
+        models.ERRANDS_TB.findAndCountAll({logging: false})
+            .then(async result => {
+                if (result.count === 0) {
+                    const csv = require('csvtojson');
+                    const csvFilePath = __dirname + '/../config/errands_data.csv';
+                    csv()
+                        .fromFile(csvFilePath)
+                        .on('end_parsed', async (errands) => {
+                            let stations = await models.STATIONS_TB.findAll({logging: false});
+                            let idxStaion = [];
+                            stations.forEach(station => {
+                                idxStaion.push(station.dataValues);
+                            });
+                            await errands.forEach(errand => {
+                                let idx = idxStaion.find((station) => {
+                                    return station.stationName === errand.startStationIdx
+                                });
+                                errand.startStationIdx = idx.stationIdx;
+                                idx = idxStaion.find((station) => {
+                                    return station.stationName === errand.arrivalStationIdx
+                                });
+                                errand.arrivalStationIdx = idx.stationIdx;
+                            });
+                            models.ERRANDS_TB.bulkCreate(errands, {logging: false})
+                                .then(() => {
+                                    console.log('Errands Data init Complete');
+                                    resolve();
+                                })
+                                .catch((err) => {
+                                    console.log(err);
+                                    reject(err);
+                                })
+                        });
+                }
+            }).catch(err => {
+                console.log(err);
+            });
+    })
+}
+
 // sync with Initializing Dummy Datas
 models.sequelize.sync().then(async () => {
     server.listen(port);
     server.on('error', onError);
     server.on('listening', onListening);
     console.log('Sync complete');
-    const csv = require('csvtojson');
-    // ------------------------ BANKS_TB 초기화 --------------------------
-    await models.BANKS_TB.findAndCountAll({logging: false})
-        .then(result => {
-            if (result.count === 0) {
-                const csvFilePath = __dirname + '/../config/banks_data.csv';
-                csv()
-                    .fromFile(csvFilePath)
-                    .on('end_parsed', (users) => {
-                        models.BANKS_TB.bulkCreate(users,{logging: false})
-                            .catch(err => {
-                                console.log('This is err : ', err)
-                            });
-                        console.log('Bank Data init Complete');
-                    })
-            }
-        });
-    // ------------------------ BANKS_TB 초기화 --------------------------
-    // ------------------------ USERS_TB 초기화 --------------------------
-    await models.USERS_TB.findAndCountAll({logging: false})
-        .then(result => {
-            if (result.count === 0) {
-                const csvFilePath = __dirname + '/../config/users_data.csv';
-                csv()
-                    .fromFile(csvFilePath)
-                    .on('end_parsed', (users) => {
-                        models.USERS_TB.bulkCreate(users,{logging: false})
-                            .catch(err => {
-                                console.log('USER ERROR : ', err)
-                            });
-                        console.log('User Data init Complete');
-                    })
-            }
-        });
-    // ------------------------ USERS_TB 초기화 --------------------------
-    // ------------------------ STAIONS_TB 초기화 --------------------------
-    await models.STATIONS_TB.findAndCountAll({logging: false})
-        .then(result => {
-            if (result.count === 0) {
-                let data = [];
-                const csvFilePath = __dirname + '/../config/stations_data.csv';
-                csv()
-                    .fromFile(csvFilePath)
-                    .on('json', parsed => {
-                        if (!data.find(station => {
-                                return station.stationName === parsed.이름
-                            })) {
-                            if (parsed.이름 && parsed.X && parsed.Y) {
-                                let newStation = {};
-                                newStation.stationName = parsed.이름;
-                                newStation.stationLocation = {type: 'Point', coordinates: [parsed.X, parsed.Y]};
-                                data.push(newStation);
-                            }
-                        }
-                    })
-                    .on('end_parsed', () => {
-                        models.STATIONS_TB.bulkCreate(data,{logging: false})
-                            .then(() => {
-                                console.log('Station Data init Complete');
-                            }).catch((err) => {
-                            console.log('THE ERROR : ' + err);
-                        })
-                    });
-            }
-
-        }).catch(err => {
-        console.log(err);
-    });
-    // ------------------------ STAIONS_TB 초기화 --------------------------
-    // ------------------------ ERRANDS_TB 초기화 --------------------------
-    await models.ERRANDS_TB.findAndCountAll({logging: false})
-        .then(async result => {
-            if (result.count === 0) {
-                const csvFilePath = __dirname + '/../config/errands_data.csv';
-                csv()
-                    .fromFile(csvFilePath)
-                    .on('end_parsed', async (errands) => {
-                        let stations = await models.STATIONS_TB.findAll({logging: false});
-                        let idxStaion = [];
-                        stations.forEach(station => {
-                            idxStaion.push(station.dataValues);
-                        });
-                        await errands.forEach(errand => {
-                            let idx = idxStaion.find((station) => {
-                                return station.stationName === errand.startStationIdx
-                            });
-                            errand.startStationIdx = idx.stationIdx;
-                            idx = idxStaion.find((station) => {
-                                return station.stationName === errand.arrivalStationIdx
-                            });
-                            errand.arrivalStationIdx = idx.stationIdx;
-                        });
-                        models.ERRANDS_TB.bulkCreate(errands, {logging: false})
-                            .then(() => {
-                                console.log('Errands Data init Complete');
-                            })
-                            .catch((err) => {
-                                console.log(err);
-                            })
-                    });
-            }
-        }).catch(err => {
-        console.log(err);
-    });
-
-    // ------------------------ ERRANDS_TB 초기화 --------------------------
+    try {
+        await initBank();
+        await initUser();
+        await initStation();
+        await initErrand();
+    } catch (err) {
+        console.log(err.message);
+    }
 });
 /**
  * Create HTTP server.
