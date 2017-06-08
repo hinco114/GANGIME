@@ -4,8 +4,8 @@ const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
 const Users = require('../models').USERS_TB;
 const Verification = require('../models').VERIFICATIONS_TB;
-const b_models = require('../models').BOXES_TB;
-const e_models = require('../models').ERRANDS_TB;
+const Boxes = require('../models').BOXES_TB;
+const Errands = require('../models').ERRANDS_TB;
 const emailConfig = require('../config/config.json')['nodemailer'];
 const resSucc = require('./gangime').resSucc;
 const createToken = require('./gangime').createToken;
@@ -25,9 +25,7 @@ router.route('/boxes')
     .post(storeErrand)
     .delete(deleteBoxItem);
 router.route('/fcm').post(registerFcm);
-router.route('/accounts')
-    .post(addAccount)
-    .put(addAccount);
+router.route('/accounts').post(addAccount);
 router.route('/histories').get(showHistories);
 
 async function verify(req, res, next) {
@@ -210,8 +208,29 @@ async function resetPass(req, res, next) {
     }
 }
 
-//TODO: 완성할것
 async function addAccount(req, res, next) {
+    try {
+        const decode = await tokenVerify(req.headers);
+        const body = req.body;
+        if (!body.bankIdx && !body.userAccount && !body.userDepositor) {
+            throw new Error('Incorrect body message');
+        }
+        let target = {
+            userBankIdx: body.bankIdx,
+            userAccount: body.userAccount,
+            userDepositor: body.userDepositor
+        };
+        let where = {
+            where: {userIdx: decode.userIdx}
+        };
+        await Users.update(target, where);
+        resSucc(res, null);
+    } catch (err) {
+        next(err);
+    }
+}
+
+async function modifyAccount(req, res, next) {
     const decode = await tokenVerify(req.headers);
     const body = req.body;
 
@@ -336,11 +355,11 @@ async function showHistories(req, res, next) {
 const putIntoBox = (userIdx, errandIdx) => {
     return new Promise(async (resolve, reject) => {
         // TODO : (DH) async-await식으로 다시 변경하기
-        const chkExist = await b_models.findOne({
+        const chkExist = await Boxes.findOne({
             where: {userIdx: userIdx, errandIdx: errandIdx}
         }).then((chkExist) => {
             if (chkExist === null) {
-                const result = b_models.create({userIdx: userIdx, errandIdx: errandIdx});
+                const result = Boxes.create({userIdx: userIdx, errandIdx: errandIdx});
                 resolve(result);
             } else {
                 throw new Error('이미 찜한 심부름입니다');
@@ -354,13 +373,13 @@ const putIntoBox = (userIdx, errandIdx) => {
 /* 2_1  찜한 전체 심부름 목록 가져오기 */
 const findBoxes = (startIdx, endIdx, userIdx) => {
     return new Promise((resolve, reject) => {
-        const result = b_models.findAll({
+        const result = Boxes.findAll({
             offset: startIdx - 1,
             limit: 5, // TODO : (DH) 페이지
             where: {userIdx: userIdx},
             attributes: ['errandIdx'],
             include: [{
-                model: e_models, attributes: ['errandIdx', 'errandTitle',
+                model: Errands, attributes: ['errandIdx', 'errandTitle',
                     'startStationIdx', 'arrivalStationIdx', 'errandPrice', 'itemPrice']
             }]
         });
@@ -377,7 +396,7 @@ const findBoxes = (startIdx, endIdx, userIdx) => {
 /* 3_1 선택한 심부름 삭제하기 */
 const deleteErrand = (userIdx, errandIdx) => {
     return new Promise((resolve, reject) => {
-        const result = b_models.destroy({
+        const result = Boxes.destroy({
             where: {errandIdx: errandIdx, userIdx: userIdx}
         });
 
