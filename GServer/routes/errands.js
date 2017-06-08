@@ -169,11 +169,12 @@ async function rejectErrand(req, res, next) {
 /* 9. 지하철역에 따른 심부름 목록 불러오기*/
 async function getStationsErrands(req, res, next) {
     try {
+        let token = await tokenVerify(req.headers);
         let startIdx = parseInt(req.query.index) - 1 || 0;
         let startStation = req.query.start;
         let arrivalStation = req.query.arrival;
-        let order = req.query.order; // order : 시간(등록시간), 금액, 거리
-        let result = await getErrandList(startIdx, startStation, arrivalStation, order);
+        let order = req.query.order;
+        let result = await getErrandList(token, startIdx, startStation, arrivalStation, order);
         resSucc(res, result);
     } catch (err) {
         next(err);
@@ -315,25 +316,37 @@ const addStars = (userIdx, errandIdx, point) => {
 };
 
 /* 9_1 조건에 맞는 심부록 목록 불러오기 */
-const getErrandList = (startIdx, startStation, arrivalStation, order) => {
+const getErrandList = (token, startIdx, startStation, arrivalStation, order) => {
     return new Promise(async (resolve, reject) => {
-        // TODO : (DH) 페이지네이션 제대로 설정하기
-        const doingResult = await e_models.findAll({ // TODO : (DH) 수행중인 심부름는 유저가 요청자 또는 수행자여야만 한다
-            include: [{model: b_models, attributes: ['boxIdx']}], // TODO : (DH) 가능하면 count 또는 T/F(EXISTS)
-            where: {startStationIdx: startStation, arrivalStationIdx: arrivalStation, errandStatus: '수행중'},
-            // TODO : (DH) arrivalStation 값이 NULL인 경우?
+        let user = token.userIdx;
+        let both = {startStationIdx: startStation, arrivalStationIdx: arrivalStation};
+        let only = {startStationIdx: startStation};
+        let stations = (!arrivalStation)? only : both;
+        let selectOrder = null;
+        if(order === '시간'){
+            selectOrder = 'createdAt';
+        }else if(order === '거리'){
+            selectOrder = 'stationDistance';
+        }else if(order === '금액'){
+            selectOrder = 'errandPrice';
+        }
+
+        const doingResult = await e_models.findAll({
+            include: [{model: b_models, attributes: ['boxIdx']}], // TODO : (DH) 가능하면 count 또는 T/F(EXISTS)로  => 아래 restResult에도 적용
+            where: [stations, {errandStatus: '진행중'}, {$or: [{requesterIdx: user}, {executorIdx: user}]}],
             attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx',
                 'itemPrice', 'errandPrice', 'errandStatus']
         });
 
         const restResult = await e_models.findAll({
-            include: [{model: b_models, attributes: ['boxIdx']}], // TODO : (DH) 가능하면 count 또는 T/F로 변경하기
-            where: {startStationIdx: startStation, arrivalStationIdx: arrivalStation, errandStatus: {$ne: '수행중'}},
-            // TODO : (DH) arrivalStation 값이 NULL인 경우
+            include: [{model: b_models, attributes: ['boxIdx']}],
+            where: [stations, {errandStatus: '진행대기'}],
             attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx',
                 'itemPrice', 'errandPrice', 'errandStatus'],
-            order: [['createdAt', 'DESC']] // TODO : (DH) 시간, 거리, 금액순으로 정렬 설정하기
+            order: [[selectOrder, 'DESC']]
         });
+
+        // TODO : (DH) 페이지네이션 제대로 설정하기
         let result = await doingResult.concat(restResult);
         resolve(result);
     })
