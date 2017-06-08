@@ -41,6 +41,7 @@ function initBank() {
                         })
                 }
             });
+        resolve();
     })
 }
 
@@ -64,6 +65,7 @@ function initUser() {
                         })
                 }
             });
+        resolve();
     })
 }
 
@@ -101,9 +103,8 @@ function initStation() {
                         });
                 }
 
-            }).catch(err => {
-                console.log(err);
             });
+        resolve();
     })
 }
 
@@ -143,9 +144,8 @@ function initErrand() {
                                 })
                         });
                 }
-            }).catch(err => {
-                console.log(err);
             });
+        resolve();
     })
 }
 

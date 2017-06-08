@@ -11,7 +11,6 @@ module.exports = (sequelize, DataTypes) => {
         userPhone: {type: DataTypes.STRING(15), allowNull: false, unique: true},
         userBankIdx: {type: DataTypes.INTEGER}, //references: {model: 'BANKS_TB', key: 'userBankIdx'}},
         userAccount: {type: DataTypes.STRING(30)},
-        userAccountName: {type: DataTypes.STRING(10)},
         userStarAvg: {type: DataTypes.INTEGER},
         userDepositor: {type: DataTypes.STRING},
         profilePicture: {type: DataTypes.STRING, isUrl: true},
