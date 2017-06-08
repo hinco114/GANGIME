@@ -14,7 +14,7 @@ module.exports = (sequelize, DataTypes) => {
         deadlineDt: {type: DataTypes.DATE, allowNull: false},
         itemPrice: {type: DataTypes.INTEGER, allowNull: false},
         errandPrice: {type: DataTypes.INTEGER, allowNull: false,},
-        errandChatId: {type: DataTypes.STRING, allowNull: false}, // MongoDB, ERRANDSCHATS_TB의 컬럼 _id
+        errandChatId: {type: DataTypes.STRING}, // MongoDB, ERRANDSCHATS_TB의 컬럼 _id
         errandStatus: {type: DataTypes.STRING, allowNull: false,},
     }, {
         timestamps: true,
@@ -27,7 +27,6 @@ module.exports = (sequelize, DataTypes) => {
                 models.STATIONS_TB.hasMany(errands_tb, {foreignKey: 'startStationIdx'});
                 models.STATIONS_TB.hasMany(errands_tb, {foreignKey: 'arrivalStationIdx'});
                 models.BOXES_TB.belongsTo(errands_tb, {foreignKey: 'errandIdx'});
-                // TODO: 몽고디비 CHAT 완성되면 관계 설정하기
             }
         }
     });

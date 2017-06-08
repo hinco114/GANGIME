@@ -207,7 +207,6 @@ const createErrand = (body, userIdx) => {
     return new Promise((resolve, reject) => {
         let inputData = body;
         inputData.requesterIdx = userIdx;
-        inputData.errandChatId = 'chatId'; // TODO: errandChatId => MongoDB 연결
         inputData.errandStatus = '입금대기';
 
         const result = e_models.create(inputData);
