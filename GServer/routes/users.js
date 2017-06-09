@@ -4,7 +4,10 @@ const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
 const sharp = require('sharp');
 const fs = require('fs');
+const pathUtil = require('path');
 const AWS = require('aws-sdk');
+const multer = require('multer');
+const upload = multer({storage: storage});
 const Users = require('../models').USERS_TB;
 const Verification = require('../models').VERIFICATIONS_TB;
 const Boxes = require('../models').BOXES_TB;
@@ -36,7 +39,8 @@ router.route('/favoriteStations')
     .post(setFavoriteStation)
     .delete(delFavoriteStation);
 router.route('/profiles')
-    .post(newProfilePic);
+    .post()
+    .post(upload.single('image'), newProfilePic);
 
 async function verify(req, res, next) {
     try {
@@ -276,36 +280,28 @@ async function delFavoriteStation(req, res, next) {
 async function newProfilePic(req, res, next) {
     try {
         const decode = await tokenVerify(req.headers);
-        const body = req.body;
-
-        const file = '../config/image.jpg';
-        const readStream = fs.createReadStream(file);
-        const bucketName = s3Config.bucketName;
-        AWS.config.region = s3Config.region;
-        AWS.config.accessKeyId = s3Config.accessKeyId;
-        AWS.config.secretAccessKey = s3Config.secretAccessKey;
-        const itemKey = 'image.jpg';
-        const contentType = 'image/jpg';
-
-        const params = {
-            Bucket: bucketName,  // 필수
-            Key: itemKey,			// 필수
-            ACL: 'public-read',
-            Body: readStream,
-            ContentType: contentType
+        const fileInfo = req.file;
+        if (!fileInfo) {
+            throw new Error('File Error')
+        }
+        console.log(fileInfo);
+        const fileName = getItemKey(fileInfo.originalname);
+        const img = 'profiles/' + fileName;
+        const thumbnail = 'thumbnails/' + fileName;
+        var transformer = sharp(fileInfo.buffer)
+            .resize(300)
+            .on('info', function (info) {
+                console.log('Image height is ' + info.height);
+            })
+            .toBuffer();
+        // fs.createReadStream(fileInfo.buffer.path);
+        // console.log(stream);
+        let result = {
+            // imgUrl: await uploadToS3(img, fs.createReadStream(fileInfo.path), fileInfo.mimetype)//,
+            // thumbnailUrl: await uploadToS3(thumbnail, fileInfo.buffer.path, fileInfo.mimetype)
         };
-
-        const s3 = new AWS.S3();
-        s3.putObject(params, (err, data) => {
-            if (err) {
-                console.error('S3 PutObject Error', err);
-                throw err;
-            }
-            // 접근 경로
-            var imageUrl = s3.endpoint.href + bucketName + '/' + itemKey; // http, https
-            console.log('File Upload Success : ', imageUrl);
-            resSucc(res,{imageUrl: imageUrl});
-        });
+        // res.send(result);
+        resSucc(res, result);
     } catch (err) {
         next(err);
     }
@@ -358,11 +354,11 @@ const addCode = (email, code) => {
 //////////////////////////////////////////////////////////////////////////////
 /* 1. 심부름 찜하기 */
 async function storeErrand(req, res, next) {
-    const decode = await tokenVerify(req.headers);
-    const userIdx = decode.userIdx;
-    let errandIdx = req.body.errandIdx;
-
     try {
+        const decode = await tokenVerify(req.headers);
+        const userIdx = decode.userIdx;
+        let errandIdx = req.body.errandIdx;
+
         let result = await putIntoBox(userIdx, errandIdx);
         resSucc(res, result);
     } catch (err) {
@@ -372,11 +368,11 @@ async function storeErrand(req, res, next) {
 
 /* 2. 심부름 찜한 목록 보기 */
 async function getBoxList(req, res, next) {
-    let startIdx = parseInt(req.query.index) || 1;
-    let endIdx = startIdx + 2;
-    const decode = await tokenVerify(req.headers);
-    const userIdx = decode.userIdx;
     try {
+        let startIdx = parseInt(req.query.index) || 1;
+        let endIdx = startIdx + 2;
+        const decode = await tokenVerify(req.headers);
+        const userIdx = decode.userIdx;
         let result = await findBoxes(startIdx, endIdx, userIdx);
         resSucc(res, result);
     } catch (err) {
@@ -386,11 +382,11 @@ async function getBoxList(req, res, next) {
 
 /* 3. 심부름 찜한 목록 삭제하기 */
 async function deleteBoxItem(req, res, next) {
-    const decode = await tokenVerify(req.headers);
-    const userIdx = decode.userIdx;
-    let errandIdx = req.body.errandIdx;
-
     try {
+        const decode = await tokenVerify(req.headers);
+        const userIdx = decode.userIdx;
+        let errandIdx = req.body.errandIdx;
+
         let result = await deleteErrand(userIdx, errandIdx);
         resSucc(res, result);
     } catch (err) {
@@ -400,10 +396,10 @@ async function deleteBoxItem(req, res, next) {
 
 /* 4. FCM 등록하기 */
 async function registerFcm(req, res, next) {
-    const userIdx = await tokenVerify(req.headers);
-    let fcmToken = req.body.fcmToken;
-
     try {
+        const userIdx = await tokenVerify(req.headers);
+        let fcmToken = req.body.fcmToken;
+
         await addFcm(userIdx, fcmToken);
         // TODO : (DH) update와 같이 반환되는 값이 없는데 단순하게 이렇게 해도 될지?
         resSucc(res, null);
@@ -414,11 +410,11 @@ async function registerFcm(req, res, next) {
 
 /* 5. 심부름 내역 보기 */
 async function showHistories(req, res, next) {
-    const token = await tokenVerify(req.headers);
-    let startIdx = parseInt(req.query.index) - 1 || 0;
-    let category = req.query.category;
-
     try {
+        const token = await tokenVerify(req.headers);
+        let startIdx = parseInt(req.query.index) - 1 || 0;
+        let category = req.query.category;
+
         let result = await getAllHistories(token, startIdx, category);
         res.send({msg: 'success', data: result});
     } catch (err) {
@@ -521,5 +517,41 @@ const getAllHistories = (token, startIdx, category) => {
         }
     )
 };
+
+const uploadToS3 = (itemKey, readStream, mimetype) => {
+    return new Promise((resolve, reject) => {
+        try {
+            // console.log(itemKey, readStream, mimetype);
+            const bucketName = s3Config.bucketName;
+            const params = {
+                Bucket: bucketName,  // 필수
+                Key: itemKey,			// 필수
+                ACL: 'public-read',
+                Body: readStream,
+                ContentType: mimetype
+            };
+            AWS.config.region = s3Config.region;
+            AWS.config.accessKeyId = s3Config.accessKeyId;
+            AWS.config.secretAccessKey = s3Config.secretAccessKey;
+            const s3 = new AWS.S3();
+            s3.putObject(params, (err, data) => {
+                if (err) {
+                    reject(err);
+                }
+                var imageUrl = s3.endpoint.href + bucketName + '/' + itemKey; // http, https
+                resolve(imageUrl);
+            });
+        } catch (err) {
+            console.log('ERR OCCURED : ', err);
+        }
+    });
+};
+
+const getItemKey = (originName) => {
+    const extname = pathUtil.extname(originName);
+    const now = new Date(); // 날짜를 이용한 파일 이름 생성
+    const itemKey = 'file_' + now.getYear() + now.getMonth() + now.getDay() + now.getHours() + now.getMinutes() + now.getSeconds() + '_' + Math.floor(Math.random() * 1000) + extname;
+    return itemKey;
+}
 
 module.exports = router;
