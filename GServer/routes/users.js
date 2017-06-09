@@ -7,7 +7,7 @@ const fs = require('fs');
 const pathUtil = require('path');
 const AWS = require('aws-sdk');
 const multer = require('multer');
-const upload = multer({storage: storage});
+const upload = multer({dest: 'uploads/'});
 const Users = require('../models').USERS_TB;
 const Verification = require('../models').VERIFICATIONS_TB;
 const Boxes = require('../models').BOXES_TB;
@@ -284,23 +284,28 @@ async function newProfilePic(req, res, next) {
         if (!fileInfo) {
             throw new Error('File Error')
         }
-        console.log(fileInfo);
         const fileName = getItemKey(fileInfo.originalname);
         const img = 'profiles/' + fileName;
         const thumbnail = 'thumbnails/' + fileName;
-        var transformer = sharp(fileInfo.buffer)
-            .resize(300)
-            .on('info', function (info) {
-                console.log('Image height is ' + info.height);
-            })
-            .toBuffer();
-        // fs.createReadStream(fileInfo.buffer.path);
-        // console.log(stream);
+        sharp(fileInfo.path)
+            .resize(150)
+            .toFile(thumbnail);
         let result = {
-            // imgUrl: await uploadToS3(img, fs.createReadStream(fileInfo.path), fileInfo.mimetype)//,
-            // thumbnailUrl: await uploadToS3(thumbnail, fileInfo.buffer.path, fileInfo.mimetype)
+            profilePictureUrl: await uploadToS3(img, fs.createReadStream(fileInfo.path), fileInfo.mimetype),
+            profileThumbnailUrl: await uploadToS3(thumbnail, fs.createReadStream(thumbnail), fileInfo.mimetype)
         };
-        // res.send(result);
+        fs.unlinkSync(fileInfo.path);
+        fs.unlinkSync(thumbnail);
+        const target = {
+            profilePicture: result.profilePictureUrl,
+            profileThumbnail: result.profileThumbnailUrl
+        };
+        const where = {
+            where: {
+                userIdx: decode.userIdx
+            }
+        };
+        await Users.update(target, where);
         resSucc(res, result);
     } catch (err) {
         next(err);
