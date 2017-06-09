@@ -27,12 +27,11 @@ router.route('/:errandIdx/accept').post(acceptErrand);
 
 /* 1. 심부름 등록하기 */
 async function registerErrand(req, res, next) {
-    let body = req.body;
-    const decode = await tokenVerify(req.headers);
-    const userIdx = decode.userIdx;
-    //TODO : DH_내용 누락되는 경우 체크 필요성?
     try {
-        let result = await createErrand(body, userIdx);
+        let body = req.body;
+        const decode = await tokenVerify(req.headers);
+        const userIdx = decode.userIdx;
+        let result = await createErrangd(body, userIdx);
         resSucc(res, result);
     } catch (err) {
         next(err);

@@ -6,6 +6,7 @@ const Users = require('../models').USERS_TB;
 const Verification = require('../models').VERIFICATIONS_TB;
 const Boxes = require('../models').BOXES_TB;
 const Errands = require('../models').ERRANDS_TB;
+const UserStation = require('../models').USER_STATIONS_TB;
 const emailConfig = require('../config/config.json')['nodemailer'];
 const resSucc = require('./gangime').resSucc;
 const createToken = require('./gangime').createToken;
@@ -27,6 +28,9 @@ router.route('/boxes')
 router.route('/fcm').post(registerFcm);
 router.route('/accounts').post(addAccount);
 router.route('/histories').get(showHistories);
+router.route('/favoriteStations')
+    .post(setFavoriteStation)
+    .delete(delFavoriteStation);
 
 async function verify(req, res, next) {
     try {
@@ -230,10 +234,37 @@ async function addAccount(req, res, next) {
     }
 }
 
-async function modifyAccount(req, res, next) {
-    const decode = await tokenVerify(req.headers);
-    const body = req.body;
+async function setFavoriteStation(req, res, next) {
+    try {
+        const decode = await tokenVerify(req.headers);
+        const body = req.body;
+        let result = await UserStation.findAndCountAll({where: {userIdx: decode.userIdx}});
+        if (result.count >= 4) {
+            throw new Error('Already have 4 Stations');
+        }
+        const target = {
+            userIdx: decode.userIdx,
+            stationIdx: body.stationIdx
+        };
+        result = await UserStation.create(target);
+        resSucc(res, {userStaionIdx: result.userStationIdx});
+    } catch (err) {
+        next(err);
+    }
+}
 
+async function delFavoriteStation(req, res, next) {
+    try {
+        const decode = await tokenVerify(req.headers);
+        const body = req.body;
+        if (!body.stationIdx) {
+            throw new Error('stationIdx Required');
+        }
+        const result = await UserStation.destroy({where: {userIdx: decode.userIdx, stationIdx: body.stationIdx}});
+        resSucc(res, result);
+    } catch (err) {
+        next(err);
+    }
 }
 
 const validCode = async (userEmail, code) => {
@@ -436,7 +467,7 @@ const getAllHistories = (token, startIdx, category) => {
             }
 
             try {
-                const result = e_models.sequelize.query("SELECT errandIdx, errandTitle, startStationIdx, arrivalStationIdx, deadlineDt, itemPrice, errandPrice, errandStatus " +
+                const result = Errands.sequelize.query("SELECT errandIdx, errandTitle, startStationIdx, arrivalStationIdx, deadlineDt, itemPrice, errandPrice, errandStatus " +
                     "FROM ERRANDS_TB WHERE " + role + " ORDER BY CASE WHEN errandStatus='수행중' THEN 1 ELSE 2 END, createdAt DESC LIMIT 10 OFFSET " + startIdx).spread((res, metadata) => {
                     resolve(res);
                 });
