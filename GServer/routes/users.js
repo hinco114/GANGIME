@@ -2,12 +2,16 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
+const sharp = require('sharp');
+const fs = require('fs');
+const AWS = require('aws-sdk');
 const Users = require('../models').USERS_TB;
 const Verification = require('../models').VERIFICATIONS_TB;
 const Boxes = require('../models').BOXES_TB;
 const Errands = require('../models').ERRANDS_TB;
 const UserStation = require('../models').USER_STATIONS_TB;
 const emailConfig = require('../config/config.json')['nodemailer'];
+const s3Config = require('../config/config.json')['S3'];
 const resSucc = require('./gangime').resSucc;
 const createToken = require('./gangime').createToken;
 const tokenVerify = require('./gangime').tokenVerify;
@@ -31,6 +35,8 @@ router.route('/histories').get(showHistories);
 router.route('/favoriteStations')
     .post(setFavoriteStation)
     .delete(delFavoriteStation);
+router.route('/profiles')
+    .post(newProfilePic);
 
 async function verify(req, res, next) {
     try {
@@ -262,6 +268,44 @@ async function delFavoriteStation(req, res, next) {
         }
         const result = await UserStation.destroy({where: {userIdx: decode.userIdx, stationIdx: body.stationIdx}});
         resSucc(res, result);
+    } catch (err) {
+        next(err);
+    }
+}
+
+async function newProfilePic(req, res, next) {
+    try {
+        const decode = await tokenVerify(req.headers);
+        const body = req.body;
+
+        const file = '../config/image.jpg';
+        const readStream = fs.createReadStream(file);
+        const bucketName = s3Config.bucketName;
+        AWS.config.region = s3Config.region;
+        AWS.config.accessKeyId = s3Config.accessKeyId;
+        AWS.config.secretAccessKey = s3Config.secretAccessKey;
+        const itemKey = 'image.jpg';
+        const contentType = 'image/jpg';
+
+        const params = {
+            Bucket: bucketName,  // 필수
+            Key: itemKey,			// 필수
+            ACL: 'public-read',
+            Body: readStream,
+            ContentType: contentType
+        };
+
+        const s3 = new AWS.S3();
+        s3.putObject(params, (err, data) => {
+            if (err) {
+                console.error('S3 PutObject Error', err);
+                throw err;
+            }
+            // 접근 경로
+            var imageUrl = s3.endpoint.href + bucketName + '/' + itemKey; // http, https
+            console.log('File Upload Success : ', imageUrl);
+            resSucc(res,{imageUrl: imageUrl});
+        });
     } catch (err) {
         next(err);
     }
