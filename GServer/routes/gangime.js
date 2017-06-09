@@ -16,10 +16,15 @@ const resSucc = (res, data) => {
         delete data.end;
     } else if (Array.isArray(data)) {
         resultModel.total = data.length;
-        const idxName = Object.keys(data[0].dataValues)[0];
+        let idxName, start, end;
+        if (data.length > 0) {
+            idxName = Object.keys(data[0].dataValues)[0];
+            start = data[0][idxName];
+            end = data[data.length - 1][idxName];
+        }
         resultModel.index = {
-            start: data[0][idxName],
-            end: data[data.length - 1][idxName]
+            start: start || 0,
+            end: end || 0
         }
     }
     resultModel.data = data ? data : null;
@@ -47,7 +52,10 @@ async function tokenVerify(headers) {
 
 async function createToken(userIdx, userNickname) {
     try {
-        const token = jwt.sign({userIdx: userIdx, userNickname: userNickname}, jwtConfig.SECRET_KEY, {expiresIn: jwtConfig.EXPIRES});
+        const token = jwt.sign({
+            userIdx: userIdx,
+            userNickname: userNickname
+        }, jwtConfig.SECRET_KEY, {expiresIn: jwtConfig.EXPIRES});
         return token;
     } catch (err) {
         next(err);
