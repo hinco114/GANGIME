@@ -389,16 +389,13 @@ const getErrandList = (token, startIdx, startStation, arrivalStation, order) => 
                 order: [[selectOrder, 'DESC']]
             });
 
-            // if(result[0].dataValues === undefined){
-            //     throw new Error("심부름 목록이 없다");
-            // }
             // restResult.forEach(result => {
             //     result.dataValues.boxIdx = result.dataValues.BOXES_TBs[0];
             //     delete result.dataValues.BOXES_TBs;
             // });
 
             // TODO : (DH) 페이지네이션 제대로 설정하기 => slice 사용(6번. 채팅 참고하기
-
+            let result = await doingResult.concat(restResult);
             resolve(result);
         } catch (err) {
             reject(err);
