@@ -47,8 +47,8 @@ const findStation = (lat, lon) => {
     return s_models.findAll({
         limit: 1,
         attributes: ['stationName'],
-        order: [s_models.sequelize.fn('ST_DISTANCE', s_models.sequelize.col('stationLocation'),
-            s_models.sequelize.fn('ST_GeomFromText', `POINT(${lat} ${lon})`)), 'ASC']
+        order: [[s_models.sequelize.fn('ST_DISTANCE', s_models.sequelize.col('stationLocation'),
+            s_models.sequelize.fn('ST_GeomFromText', `POINT(${lat} ${lon})`)), 'ASC']]
     })
 };
 

@@ -1,15 +1,15 @@
 const express = require('express');
 const router = express.Router();
+const schedule = require('node-schedule');
 const resSucc = require('./gangime').resSucc;
 const tokenVerify = require('./gangime').tokenVerify;
-const e_models = require('../models/').ERRANDS_TB;
-const c_models = require('../models/').CANCEL_TB;
-const s_models = require('../models/').STARS_TB;
-const b_models = require('../models/').BOXES_TB;
-const u_models = require('../models/').USERS_TB;
-const t_models = require('../models/').STATIONS_TB;
+const Errands = require('../models/').ERRANDS_TB;
+const Cancel = require('../models/').CANCEL_TB;
+const Stars = require('../models/').STARS_TB;
+const Boxes = require('../models/').BOXES_TB;
+const Users = require('../models/').USERS_TB;
+const Stations = require('../models/').STATIONS_TB;
 const errandChats = require('../models/').errandChats;
-const schedule = require('node-schedule');
 
 router.route('/')
     .post(registerErrand)
@@ -98,7 +98,7 @@ async function getChats(req, res, next) {
         const userIdx = decode.userIdx;
         const userNickname = decode.userNickname;
         let errandIdx = req.params.errandIdx;
-        const errand = await e_models.findById(errandIdx);
+        const errand = await Errands.findById(errandIdx);
         if (!errand) {
             throw new Error('Errand not found');
         }
@@ -115,7 +115,7 @@ async function getChats(req, res, next) {
         let data = {};
         data.start = index + 1;
         data.end = index + errandChat.chats.length;
-        let user = await u_models.findById(opponent);
+        let user = await Users.findById(opponent);
         data.myNickname = userNickname;
         data.opponentNickname = user.userNickname;
         data.chats = errandChat.chats.slice(index, index + 50);
@@ -130,8 +130,13 @@ async function askErrand(req, res, next) {
     try {
         let token = await tokenVerify(req.headers);
         let errandIdx = req.params.errandIdx;
-        let result = await checkAllowance(token, errandIdx);
-        resSucc(res, result);
+        let result = await askToRequester(token, errandIdx);
+        if (result.dataValues.errandStatus === '신청진행중') {
+            Errands.update(
+                {errandStatus: '매칭대기중'}, {where: {errandIdx: errandIdx}, returning: true});
+        }
+        // resSucc(res, result);
+        res.send({msg: 'success'});
     } catch (err) {
         next(err);
     }
@@ -141,7 +146,7 @@ async function askErrand(req, res, next) {
 async function acceptErrand(req, res, next) {
     try {
         const decode = await tokenVerify(req.headers);
-        let result = await e_models.findById(req.params.errandIdx);
+        let result = await Errands.findById(req.params.errandIdx);
         const creation = {
             errandIdx: result.dataValues.errandIdx,
             executorIdx: result.dataValues.executorIdx,
@@ -162,7 +167,7 @@ async function rejectErrand(req, res, next) {
     try {
         let token = await tokenVerify(req.headers);
         let errandIdx = req.params.errandIdx;
-        let result = await canceldd(token, errandIdx);
+        let result = await cancelAdd(token, errandIdx);
         resSucc(res, result);
     } catch (err) {
         next(err);
@@ -197,7 +202,7 @@ async function addChats(req, res, next) {
         const decode = await tokenVerify(req.headers);
         const userIdx = decode.userIdx;
         let errandIdx = req.params.errandIdx;
-        const errand = await e_models.findById(errandIdx);
+        const errand = await Errands.findById(errandIdx);
         if (!errand) {
             throw new Error('Errand not found');
         }
@@ -220,36 +225,32 @@ const createErrand = (body, userIdx) => {
         try {
             let inputData = body;
             inputData.requesterIdx = userIdx;
-            inputData.errandStatus = '입금대기';
+            inputData.errandStatus = '입금대기중';
 
-            let startIdx = body.startStationIdx;
-            let arrivalIdx = body.arrivalStationIdx;
-
-            let s_location = await t_models.findById(startIdx,
-                {attributes: ['stationLocation']});
-            let a_location = await t_models.findById(arrivalIdx,
-                {attributes: ['stationLocation']});
+            let s_location = await Stations.findById(body.startStationIdx, {attributes: ['stationLocation']});
+            let a_location = await Stations.findById(body.arrivalStationIdx, {attributes: ['stationLocation']});
 
             let s_lat = s_location.dataValues.stationLocation.coordinates[0];
             let s_lon = s_location.dataValues.stationLocation.coordinates[1];
             let a_lat = a_location.dataValues.stationLocation.coordinates[0];
             let a_lon = a_location.dataValues.stationLocation.coordinates[1];
+            let distances = await getDistance(s_lat, s_lon, a_lat, a_lon);
+            inputData.stationDistance = distances.dataValues.stationDistance;
 
-            // let tst = await testDistance(s_location, a_location);
-            // let tst = await t_models.findOne({
-            //     attributes: [[t_models.sequelize.fn('ST_DISTANCE', }),
-            //         t_models.findById(arrivalIdx, {attributes: ['stationLocation']}))]]
-            // });
-            // let tst = await testDistance(s_location, a_location);
-
-            // console.log(tst);
-
-            const result = await e_models.create(inputData);
+            const result = await Errands.create(inputData);
             resolve(result);
         } catch (err) {
             reject(err);
         }
     });
+};
+
+/* 1_2 지하철역 간의 거리 구하기 */
+const getDistance = (s_lat, s_lon, a_lat, a_lon) => {
+    return Stations.findOne({
+        attributes: [[Stations.sequelize.fn('ST_DISTANCE', Stations.sequelize.fn('ST_GeomFromText', `POINT(${s_lat} ${s_lon})`),
+            Stations.sequelize.fn('ST_GeomFromText', `POINT(${a_lat} ${a_lon})`)), 'stationDistance']]
+    })
 };
 
 /* 2_1 해당 심부름의 내역 가져오기 */
@@ -261,18 +262,18 @@ const getErrandDetail = (errandIdx) => {
         let result = null;
 
         try {
-            let statusChk = await e_models.findOne({
+            let statusChk = await Errands.findOne({
                 where: {errandIdx: errandIdx}, attributes: ['errandStatus']
             });
 
             if (statusChk.dataValues.errandStatus === '취소완료') { // status = "취소완료"일 때만 cancelReason 컬럼 반환
-                result = e_models.findOne({
-                    include: [{model: c_models, attributes: ['cancelReason']}],
+                result = Errands.findOne({
+                    include: [{model: Cancel, attributes: ['cancelReason']}],
                     where: {errandIdx: errandIdx},
                     attributes: inputData
                 });
             } else {
-                result = e_models.findOne({
+                result = Errands.findOne({
                     where: {errandIdx: errandIdx},
                     attributes: inputData
                 });
@@ -289,12 +290,12 @@ const sendNewErrand = (body, errandIdx, userIdx) => {
     return new Promise(async (resolve, reject) => {
         let result = null;
         try {
-            let statusChk = await e_models.findOne({
+            let statusChk = await Errands.findOne({
                 where: {errandIdx: errandIdx}, attributes: ['errandStatus']
             });
 
             if (statusChk.dataValues.errandStatus === '입금대기') {
-                result = e_models.update(
+                result = Errands.update(
                     body, {where: {requesterIdx: userIdx, errandIdx: errandIdx}, returning: true});
                 resolve(result);
             } else {
@@ -310,7 +311,7 @@ const sendNewErrand = (body, errandIdx, userIdx) => {
 const registerCancel = (userIdx, errandIdx, reason) => {
     return new Promise(async (resolve, reject) => {
         try {
-            let findTarget = await e_models.findOne({
+            let findTarget = await Errands.findOne({
                 where: {errandIdx: errandIdx},
                 attributes: ['requesterIdx', 'executorIdx']
             });
@@ -318,10 +319,10 @@ const registerCancel = (userIdx, errandIdx, reason) => {
             let executorIdx = findTarget.dataValues.executorIdx;
             let targetUserIdx = (requesterIdx === userIdx) ? executorIdx : requesterIdx;
 
-            await c_models.create(
+            await Cancel.create(
                 {errandIdx: errandIdx, targetUserIdx: targetUserIdx, cancelReason: reason});
 
-            let changeStatus = await e_models.update(
+            let changeStatus = await Errands.update(
                 {errandStatus: "취소요청"}, {where: {errandIdx: errandIdx}, returning: true}
             );
             resolve(changeStatus);
@@ -334,7 +335,7 @@ const registerCancel = (userIdx, errandIdx, reason) => {
 /* 5_1 평가 테이블에 점수 입력하기 */
 const addStars = (userIdx, errandIdx, point) => {
     return new Promise((resolve, reject) => {
-        let result = s_models.create({
+        let result = Stars.create({
             userIdx: userIdx, errandIdx: errandIdx, point: point
         });
         if (result) {
@@ -346,14 +347,44 @@ const addStars = (userIdx, errandIdx, point) => {
     })
 };
 
-const checkAllowance = (token, errandIdx) => {
-    return new Promise((resolve, reject) => {
-        let startTime = new Date(Date.now());
-        let endTime = new Date(startTime.getTime() + 100000);
-        tst = {start: startTime, end: endTime, rule: '*/5 * * * * *'};
-        scheduleTest(tst);
+/* 6_1 스케줄러 사용해서 수행 요청 작업 */
+const askToRequester = (token, errandIdx) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let userIdx = token.userIdx;
+            let startTime = new Date(Date.now());
+            let endTime = new Date(startTime.getTime() + 50000); // TODO: (DH) 시간 변경하기, 현재는 테스트 시간으로 설정함
+
+            const askExecuting = await Errands.update(
+                {errandStatus: '신청진행중', executorIdx: userIdx}, {where: {errandIdx: errandIdx}, returning: true});
+
+            const countTimer = await schedule.scheduleJob({start: startTime, end: endTime}, () => {
+                const restResult = Errands.findOne({
+                    where: [{errandIdx: errandIdx}], attributes: ['errandStatus']
+                });
+                countTimer.cancel();
+                resolve(restResult);
+            });
+        } catch (err) {
+            reject(err);
+        }
     })
-}
+};
+
+/* 8_1 요청이 들어온 심부름 거절하기 */
+const cancelAdd = (token, errandIdx) => {
+    return new Promise(async (resolve, reject) => {
+        try{
+            let userIdx = token.userIdx;
+            let cancelExecutor = await Errands.update(
+                {executorIdx: null},
+                {where: {errandIdx: errandIdx, errandStatus: '신청진행중'}, returning: true});
+            resolve(cancelExecutor);
+        }catch(err){
+            reject(err);
+        }
+    })
+};
 
 /* 9_1 조건에 맞는 심부록 목록 불러오기 */
 const getErrandList = (token, startIdx, startStation, arrivalStation, order) => {
@@ -373,16 +404,16 @@ const getErrandList = (token, startIdx, startStation, arrivalStation, order) => 
                 selectOrder = 'errandPrice';
             }
 
-            const doingResult = await e_models.findAll({
-                include: [{model: b_models, attributes: ['boxIdx']}], // TODO : (DH) 가능하면 count 또는 T/F(EXISTS)로  => 아래 restResult에도 적용
+            const doingResult = await Errands.findAll({
+                include: [{model: Boxes, attributes: ['boxIdx']}], // TODO : (DH) 가능하면 count 또는 T/F(EXISTS)로  => 아래 restResult에도 적용
                 where: [stations, {errandStatus: '진행중'}, {$or: [{requesterIdx: user}, {executorIdx: user}]}],
                 attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx',
                     'itemPrice', 'errandPrice', 'errandStatus']
             });
 
-            const restResult = await e_models.findAll({
+            const restResult = await Errands.findAll({
 
-                include: [{model: b_models, attributes: ['boxIdx']}],
+                include: [{model: Boxes, attributes: ['boxIdx']}],
                 where: [stations, {errandStatus: '입금대기'}],
                 attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx',
                     'itemPrice', 'errandPrice', 'errandStatus'],
@@ -402,25 +433,5 @@ const getErrandList = (token, startIdx, startStation, arrivalStation, order) => 
         }
     })
 };
-
-/* 스케줄러 테스트 */
-const scheduleTest = (tst) => {
-    const countFive = schedule.scheduleJob(tst, async () => {
-        const restResult = await e_models.findOne({
-            where: [{errandIdx: 50}, {errandStatus: '입금대기'}],
-            attributes: ['errandTitle']
-        });
-
-        if (restResult === null) {
-            countFive.cancel();
-        }
-    });
-};
-//
-// const testDistance = (s_location, a_location) => {
-//     return t_models.findOne({
-//         attributes: [t_models.sequelize.fn('ST_DISTANCE',
-//     });
-// };
 
 module.exports = router;
