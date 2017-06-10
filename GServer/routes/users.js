@@ -39,8 +39,9 @@ router.route('/favoriteStations')
     .post(setFavoriteStation)
     .delete(delFavoriteStation);
 router.route('/profiles')
-    .post()
     .post(upload.single('image'), newProfilePic);
+router.route('/profiles/:userIdx')
+    .get(getProfile);
 
 async function verify(req, res, next) {
     try {
@@ -317,6 +318,18 @@ async function newProfilePic(req, res, next) {
         next(err);
     }
 }
+
+ async function getProfile(req, res, next) {
+     try {
+         const conditions = {
+             attributes: ['userIdx', 'userNickname', 'userEmail', 'userStarAvg', 'profileThumbnail']
+         };
+         const result = await Users.findById(req.params.userIdx, conditions);
+         resSucc(res, result);
+     } catch (err) {
+         next(err);
+     }
+ }
 
 const validCode = async (userEmail, code) => {
     let conditions = {
