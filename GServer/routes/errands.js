@@ -220,29 +220,17 @@ const createErrand = (body, userIdx) => {
         try {
             let inputData = body;
             inputData.requesterIdx = userIdx;
-            inputData.errandStatus = '입금대기';
+            inputData.errandStatus = '입금대기중';
 
-            let startIdx = body.startStationIdx;
-            let arrivalIdx = body.arrivalStationIdx;
-
-            let s_location = await t_models.findById(startIdx,
-                {attributes: ['stationLocation']});
-            let a_location = await t_models.findById(arrivalIdx,
-                {attributes: ['stationLocation']});
+            let s_location = await t_models.findById(body.startStationIdx, {attributes: ['stationLocation']});
+            let a_location = await t_models.findById(body.arrivalStationIdx, {attributes: ['stationLocation']});
 
             let s_lat = s_location.dataValues.stationLocation.coordinates[0];
             let s_lon = s_location.dataValues.stationLocation.coordinates[1];
             let a_lat = a_location.dataValues.stationLocation.coordinates[0];
             let a_lon = a_location.dataValues.stationLocation.coordinates[1];
-
-            // let tst = await testDistance(s_location, a_location);
-            // let tst = await t_models.findOne({
-            //     attributes: [[t_models.sequelize.fn('ST_DISTANCE', }),
-            //         t_models.findById(arrivalIdx, {attributes: ['stationLocation']}))]]
-            // });
-            // let tst = await testDistance(s_location, a_location);
-
-            // console.log(tst);
+            let distances = await getDistance(s_lat, s_lon, a_lat, a_lon);
+            inputData.stationDistance = distances.dataValues.stationDistance;
 
             const result = await e_models.create(inputData);
             resolve(result);
@@ -250,6 +238,14 @@ const createErrand = (body, userIdx) => {
             reject(err);
         }
     });
+};
+
+/* 1_2 지하철역 간의 거리 구하기 */
+const getDistance = (s_lat, s_lon, a_lat, a_lon) => {
+    return t_models.findOne({
+        attributes: [[t_models.sequelize.fn('ST_DISTANCE', t_models.sequelize.fn('ST_GeomFromText', `POINT(${s_lat} ${s_lon})`),
+            t_models.sequelize.fn('ST_GeomFromText', `POINT(${a_lat} ${a_lon})`)), 'stationDistance']]
+    })
 };
 
 /* 2_1 해당 심부름의 내역 가져오기 */
@@ -416,11 +412,5 @@ const scheduleTest = (tst) => {
         }
     });
 };
-//
-// const testDistance = (s_location, a_location) => {
-//     return t_models.findOne({
-//         attributes: [t_models.sequelize.fn('ST_DISTANCE',
-//     });
-// };
 
 module.exports = router;
