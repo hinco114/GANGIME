@@ -279,23 +279,29 @@ async function delFavoriteStation(req, res, next) {
 
 async function newProfilePic(req, res, next) {
     try {
+        //TODO: (SH) If Image URL already exist on User's DB, It should be delete.
         const decode = await tokenVerify(req.headers);
         const fileInfo = req.file;
         if (!fileInfo) {
             throw new Error('File Error')
         }
+        // Get a new FileName
         const fileName = getItemKey(fileInfo.originalname);
-        const img = 'profiles/' + fileName;
-        const thumbnail = 'thumbnails/' + fileName;
+        const img = __dirname +'/../bin/profiles/' + fileName;
+        const thumbnail = __dirname +'/../bin/thumbnails/' + fileName;
+        // Make a Thumbnail to file
         sharp(fileInfo.path)
             .resize(150)
             .toFile(thumbnail);
+        // Upload and get URL
         let result = {
             profilePictureUrl: await uploadToS3(img, fs.createReadStream(fileInfo.path), fileInfo.mimetype),
             profileThumbnailUrl: await uploadToS3(thumbnail, fs.createReadStream(thumbnail), fileInfo.mimetype)
         };
+        // Delete Files on disk
         fs.unlinkSync(fileInfo.path);
         fs.unlinkSync(thumbnail);
+        // Update user db
         const target = {
             profilePicture: result.profilePictureUrl,
             profileThumbnail: result.profileThumbnailUrl
@@ -526,24 +532,30 @@ const getAllHistories = (token, startIdx, category) => {
 const uploadToS3 = (itemKey, readStream, mimetype) => {
     return new Promise((resolve, reject) => {
         try {
-            // console.log(itemKey, readStream, mimetype);
+            // For linux system, used full path of file. Path needs to slice
+            const slicedKey = itemKey.slice(itemKey.lastIndexOf('bin/') + 4, itemKey.length);
+            // S3 BucketName
             const bucketName = s3Config.bucketName;
+            // Params setting
             const params = {
-                Bucket: bucketName,  // 필수
-                Key: itemKey,			// 필수
+                Bucket: bucketName,
+                Key: slicedKey,
                 ACL: 'public-read',
                 Body: readStream,
                 ContentType: mimetype
             };
+            // Get settings in config file
             AWS.config.region = s3Config.region;
             AWS.config.accessKeyId = s3Config.accessKeyId;
             AWS.config.secretAccessKey = s3Config.secretAccessKey;
             const s3 = new AWS.S3();
+            // Try to upload file
             s3.putObject(params, (err, data) => {
                 if (err) {
                     reject(err);
                 }
-                var imageUrl = s3.endpoint.href + bucketName + '/' + itemKey; // http, https
+                // If upload is successful, get a url and return
+                var imageUrl = s3.endpoint.href + bucketName + '/' + slicedKey;
                 resolve(imageUrl);
             });
         } catch (err) {
@@ -553,10 +565,11 @@ const uploadToS3 = (itemKey, readStream, mimetype) => {
 };
 
 const getItemKey = (originName) => {
+    // Create new file name based on DATE
     const extname = pathUtil.extname(originName);
-    const now = new Date(); // 날짜를 이용한 파일 이름 생성
+    const now = new Date();
     const itemKey = 'file_' + now.getYear() + now.getMonth() + now.getDay() + now.getHours() + now.getMinutes() + now.getSeconds() + '_' + Math.floor(Math.random() * 1000) + extname;
     return itemKey;
-}
+};
 
 module.exports = router;
