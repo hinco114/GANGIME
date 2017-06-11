@@ -22,7 +22,8 @@ module.exports = (sequelize, DataTypes) => {
         comment: '회원 정보 테이블',
         classMethods: {
             associate: models => {
-                models.BANKS_TB.hasOne(users_tb, {foreignKey: 'userBankIdx'})
+                models.BANKS_TB.hasOne(users_tb, {foreignKey: 'userBankIdx'});
+                models.BOXES_TB.belongsTo(users_tb, {foreignKey: 'userIdx'});
             }
         }
     });

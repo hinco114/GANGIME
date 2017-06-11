@@ -235,6 +235,7 @@ const createErrand = (body, userIdx) => {
             let a_lat = a_location.dataValues.stationLocation.coordinates[0];
             let a_lon = a_location.dataValues.stationLocation.coordinates[1];
             let distances = await getDistance(s_lat, s_lon, a_lat, a_lon);
+            console.log(distances.dataValues.stationDistance * 111195);
             inputData.stationDistance = distances.dataValues.stationDistance;
 
             const result = await Errands.create(inputData);
@@ -374,13 +375,13 @@ const askToRequester = (token, errandIdx) => {
 /* 8_1 요청이 들어온 심부름 거절하기 */
 const cancelAdd = (token, errandIdx) => {
     return new Promise(async (resolve, reject) => {
-        try{
+        try {
             let userIdx = token.userIdx;
             let cancelExecutor = await Errands.update(
                 {executorIdx: null},
                 {where: {errandIdx: errandIdx, errandStatus: '신청진행중'}, returning: true});
             resolve(cancelExecutor);
-        }catch(err){
+        } catch (err) {
             reject(err);
         }
     })
@@ -414,19 +415,22 @@ const getErrandList = (token, startIdx, startStation, arrivalStation, order) => 
             const restResult = await Errands.findAll({
 
                 include: [{model: Boxes, attributes: ['boxIdx']}],
-                where: [stations, {errandStatus: '입금대기'}],
+                where: [stations, {errandStatus: '입금대기중'}],
                 attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx',
                     'itemPrice', 'errandPrice', 'errandStatus'],
                 order: [[selectOrder, 'DESC']]
             });
 
-            // restResult.forEach(result => {
-            //     result.dataValues.boxIdx = result.dataValues.BOXES_TBs[0];
-            //     delete result.dataValues.BOXES_TBs;
-            // });
-
             // TODO : (DH) 페이지네이션 제대로 설정하기 => slice 사용(6번. 채팅 참고하기
             let result = await doingResult.concat(restResult);
+            await restResult.forEach(result => {
+                if (typeof result.dataValues.BOXES_TBs[0] === 'undefined') {
+                    delete result.dataValues.BOXES_TBs;
+                }else {
+                    result.dataValues.boxIdx = result.dataValues.BOXES_TBs[0].boxIdx;
+                    delete result.dataValues.BOXES_TBs;
+                }
+            });
             resolve(result);
         } catch (err) {
             reject(err);
