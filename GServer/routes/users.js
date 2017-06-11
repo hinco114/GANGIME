@@ -425,7 +425,7 @@ async function registerFcm(req, res, next) {
         let fcmToken = req.body.fcmToken;
 
         await addFcm(userIdx, fcmToken);
-        // TODO : (DH) update와 같이 반환되는 값이 없는데 단순하게 이렇게 해도 될지?
+        // TODO : (DH) update와 같이 반환되는 값이 없는 경우 단순하게 이렇게 해도 될지?
         resSucc(res, null);
     } catch (err) {
         next(err);

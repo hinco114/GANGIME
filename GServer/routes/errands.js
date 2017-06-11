@@ -26,6 +26,8 @@ router.route('/:errandIdx/chats')
     .post(addChats)
     .get(getChats);
 router.route('/:errandIdx/accept').post(acceptErrand);
+router.route('/errands/:errandsIdx/deposit').post(processDeposit);
+router.route('/errands/:errandsIdx/refund').post(processRefund);
 
 /* 1. 심부름 등록하기 */
 async function registerErrand(req, res, next) {
@@ -196,6 +198,39 @@ async function getStationsErrands(req, res, next) {
         next(err);
     }
 }
+
+/* 10. 관리자 페이지 : 입금 처리 */
+async function processDeposit(req, res, next){
+    try{
+        // TODO : (DH) Html에서 errandsIdx를 input에서 입력받아서 url 쿼리에 넣을 수 있는지 알아보고는 수정하기
+        let errandIdx = req.body.errandIdx;
+        let result = await applyDeposit(errandIdx);
+        resSucc(res, result);
+    }catch(err){
+        next(err);
+    }
+}
+
+/* 10_1 해당 심부름 상태 '매칭대기중'으로 수정 */
+const applyDeposit = (errandIdx) => {
+    return Errands.update( {errandStatus: '매칭대기중'}, {where: {errandIdx: errandIdx}, returning: true});
+};
+
+/* 11. 관리자 페이지 : 환불 처리 */
+async function processRefund(req, res, next){
+    try{
+        let errandIdx = req.body.errandIdx;
+        let result = await applyRefund(errandIdx);
+        resSucc(res, result);
+    }catch(err){
+        next(err);
+    }
+}
+
+/* 11_1 해당 심부름 상태 '취소완료'으로 수정 */
+const applyRefund = (errandIdx) => {
+    return Errands.update( {errandStatus: '취소완료'}, {where: {errandIdx: errandIdx}, returning: true});
+};
 
 async function addChats(req, res, next) {
     try {
@@ -406,7 +441,7 @@ const getErrandList = (token, startIdx, startStation, arrivalStation, order) => 
             }
 
             const doingResult = await Errands.findAll({
-                include: [{model: Boxes, attributes: ['boxIdx']}], // TODO : (DH) 가능하면 count 또는 T/F(EXISTS)로  => 아래 restResult에도 적용
+                include: [{model: Boxes, attributes: ['boxIdx']}],
                 where: [stations, {errandStatus: '진행중'}, {$or: [{requesterIdx: user}, {executorIdx: user}]}],
                 attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx',
                     'itemPrice', 'errandPrice', 'errandStatus']

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <body>
-<h3>Notice Page</h3>
+<h2>공지사항 등록</h2>
 <form method='post' action='/notices'>
     <ul>
         <li> 제목 : <input type='text' name='noticeTitle'> </li>
@@ -9,6 +9,20 @@
         <li> 내용 : <textarea name='noticeContent' rows="5" cols="50"></textarea></li>
     </ul>
     <input type='submit' value='게시하기'>
+</form>
+<h2>입금 처리</h2>
+<form method='post' action='/errands/:errandsIdx/deposit'>
+    <span>
+        ErrandIdx : <input type='text' name='errandIdx'>
+        <input type='submit' value='입금처리'>
+    </span>
+</form>
+<h2>환불 처리</h2>
+<form method='post' action='/errands/:errandsIdx/refund'>
+    <span>
+        ErrandIdx : <input type='text' name='errandIdx'>
+        <input type='submit' value='환불처리'>
+    </span>
 </form>
 </body>
 </html>
