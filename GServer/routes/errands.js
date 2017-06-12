@@ -195,13 +195,12 @@ const registerCancelContent = (userIdx, errandIdx, reason) => {
                 where: {errandIdx: errandIdx},
                 attributes: ['requesterIdx', 'executorIdx']
             });
-            console.log(findTarget);
             let requesterIdx = findTarget.dataValues.requesterIdx;
             let executorIdx = findTarget.dataValues.executorIdx;
             let targetUserIdx = (requesterIdx === userIdx) ? executorIdx : requesterIdx;
-            console.log(targetUserIdx);
 
             await Cancel.create({errandIdx: errandIdx, targetUserIdx: targetUserIdx, cancelReason: reason});
+            // TODO : (DH) 상대방 있는 경우에 적용하기
             let changeStatus = await Errands.update(
                 {errandStatus: "취소요청"}, {where: {errandIdx: errandIdx}}, {returning: true}
             );
