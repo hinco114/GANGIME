@@ -17,7 +17,7 @@ router.route('/')
 router.route('/:errandIdx')
     .get(showErrandDetail)
     .post(editErrand);
-router.route('/:errandIdx/cancel').post(requestCancel);
+router.route('/:errandIdx/cancel').post(requestCancelErrand);
 router.route('/:errandIdx/star').post(evaluateErrand);
 router.route('/:errandIdx/ask').post(askErrand);
 router.route('/:errandIdx/accept').post(acceptErrand);
@@ -168,18 +168,50 @@ const editErrandContent = (body, errandIdx, userIdx) => {
 };
 
 /* 4. 상대방에게 심부름 취소 요청하기 */
-async function requestCancel(req, res, next) {
+async function requestCancelErrand(req, res, next) {
     try {
-        let decode = await tokenVerify(req.headers);
-        const userIdx = decode.userIdx;
+        if (!req.params.errandIdx) {
+            throw new Error('errandIdx not exist');
+        }
+        if (!req.body.cancelReason) {
+            throw new Error('cancelReason not exist');
+        }
+        let token = await tokenVerify(req.headers);
+        let userIdx = token.userIdx;
         let errandIdx = req.params.errandIdx;
         let reason = req.body.cancelReason;
-        let result = await registerCancel(userIdx, errandIdx, reason);
+        let result = await registerCancelContent(userIdx, errandIdx, reason);
         resSucc(res, result);
     } catch (err) {
         next(err);
     }
 }
+
+/* 4_1 심부름 취소 요청 정보 등록하기 */
+const registerCancelContent = (userIdx, errandIdx, reason) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let findTarget = await Errands.findOne({
+                where: {errandIdx: errandIdx},
+                attributes: ['requesterIdx', 'executorIdx']
+            });
+            if (!findTarget) {
+                throw new Error('Cannot find users');
+            }
+            let requesterIdx = findTarget.dataValues.requesterIdx;
+            let executorIdx = findTarget.dataValues.executorIdx;
+            let targetUserIdx = (requesterIdx === userIdx) ? executorIdx : requesterIdx;
+
+            await Cancel.create({errandIdx: errandIdx, targetUserIdx: targetUserIdx, cancelReason: reason});
+            let changeStatus = await Errands.update(
+                {errandStatus: "취소요청"}, {where: {errandIdx: errandIdx}}, {returning: true}
+            );
+            resolve(changeStatus);
+        } catch (err) {
+            reject(err);
+        }
+    })
+};
 
 /* 5. 심부름 평가하기  */
 async function evaluateErrand(req, res, next) {
@@ -358,31 +390,6 @@ async function addChats(req, res, next) {
         next(err);
     }
 }
-
-/* 4_1 심부름 취소 요청 정보 등록하기 */
-const registerCancel = (userIdx, errandIdx, reason) => {
-    return new Promise(async (resolve, reject) => {
-        try {
-            let findTarget = await Errands.findOne({
-                where: {errandIdx: errandIdx},
-                attributes: ['requesterIdx', 'executorIdx']
-            });
-            let requesterIdx = findTarget.dataValues.requesterIdx;
-            let executorIdx = findTarget.dataValues.executorIdx;
-            let targetUserIdx = (requesterIdx === userIdx) ? executorIdx : requesterIdx;
-
-            await Cancel.create(
-                {errandIdx: errandIdx, targetUserIdx: targetUserIdx, cancelReason: reason});
-
-            let changeStatus = await Errands.update(
-                {errandStatus: "취소요청"}, {where: {errandIdx: errandIdx}, returning: true}
-            );
-            resolve(changeStatus);
-        } catch (err) {
-            reject(err);
-        }
-    })
-};
 
 /* 5_1 평가 테이블에 점수 입력하기 */
 const addStars = (userIdx, errandIdx, point) => {
