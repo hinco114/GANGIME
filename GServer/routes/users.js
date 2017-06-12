@@ -37,6 +37,7 @@ router.route('/accounts').post(addAccount);
 router.route('/histories').get(showHistories);
 router.route('/favoriteStations')
     .post(setFavoriteStation)
+    .get(loadFavoriteStations)
     .delete(delFavoriteStation);
 router.route('/profiles')
     .post(upload.single('image'), newProfilePic);
@@ -288,8 +289,8 @@ async function newProfilePic(req, res, next) {
         }
         // Get a new FileName
         const fileName = getItemKey(fileInfo.originalname);
-        const img = __dirname +'/../bin/profiles/' + fileName;
-        const thumbnail = __dirname +'/../bin/thumbnails/' + fileName;
+        const img = __dirname + '/../bin/profiles/' + fileName;
+        const thumbnail = __dirname + '/../bin/thumbnails/' + fileName;
         // Make a Thumbnail to file
         sharp(fileInfo.path)
             .resize(150)
@@ -319,17 +320,17 @@ async function newProfilePic(req, res, next) {
     }
 }
 
- async function getProfile(req, res, next) {
-     try {
-         const conditions = {
-             attributes: ['userIdx', 'userNickname', 'userEmail', 'userStarAvg', 'profileThumbnail']
-         };
-         const result = await Users.findById(req.params.userIdx, conditions);
-         resSucc(res, result);
-     } catch (err) {
-         next(err);
-     }
- }
+async function getProfile(req, res, next) {
+    try {
+        const conditions = {
+            attributes: ['userIdx', 'userNickname', 'userEmail', 'userStarAvg', 'profileThumbnail']
+        };
+        const result = await Users.findById(req.params.userIdx, conditions);
+        resSucc(res, result);
+    } catch (err) {
+        next(err);
+    }
+}
 
 const validCode = async (userEmail, code) => {
     let conditions = {
@@ -445,6 +446,26 @@ async function showHistories(req, res, next) {
         next(err);
     }
 }
+
+/* 6. 관심 지하철역 불러오기 */
+async function loadFavoriteStations(req, res, next) {
+    try {
+        let token = await tokenVerify(req.headers);
+        let userIdx = token.userIdx;
+        let result = await getFavoriteStations(userIdx);
+        resSucc(res, result);
+    } catch (err) {
+        next(err);
+    }
+}
+
+/* 6_1  DB에서 관심 지하철역들 불러오기 */
+const getFavoriteStations = (userIdx) => {
+    return UserStation.findAll({
+        attributes: ['stationIdx'],
+        where: {userIdx: userIdx}
+    });
+};
 
 /* 1_1 선택한 심부름 찜하기 */
 const putIntoBox = (userIdx, errandIdx) => {

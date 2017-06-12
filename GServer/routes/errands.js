@@ -33,14 +33,48 @@ router.route('/errands/:errandsIdx/refund').post(processRefund);
 async function registerErrand(req, res, next) {
     try {
         let body = req.body;
-        const decode = await tokenVerify(req.headers);
-        const userIdx = decode.userIdx;
+        let token = await tokenVerify(req.headers);
+        let userIdx = token.userIdx;
         let result = await createErrand(body, userIdx);
         resSucc(res, result);
     } catch (err) {
         next(err);
     }
 }
+
+/* 1_1 DB에 심부름 등록 */
+const createErrand = (body, userIdx) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let s_location = await Stations.findById(body.startStationIdx, {attributes: ['stationLocation']}); // TODO : (DH) degree => meter로 변환
+            let a_location = await Stations.findById(body.arrivalStationIdx, {attributes: ['stationLocation']});
+            let s_lat = s_location.dataValues.stationLocation.coordinates[0];
+            let s_lon = s_location.dataValues.stationLocation.coordinates[1];
+            let a_lat = a_location.dataValues.stationLocation.coordinates[0];
+            let a_lon = a_location.dataValues.stationLocation.coordinates[1];
+            let distances = await getDistance(s_lat, s_lon, a_lat, a_lon);
+
+            let inputData = body;
+            inputData.requesterIdx = userIdx;
+            inputData.errandStatus = '입금대기중';
+            inputData.stationDistance = distances.dataValues.stationDistance;
+
+            let result = await Errands.create(inputData);
+            resolve(result);
+        } catch (err) {
+            reject(err);
+        }
+    });
+};
+
+/* 1_2 지하철역 간의 거리 구하기 */
+const getDistance = (s_lat, s_lon, a_lat, a_lon) => {
+    return Stations.findOne({
+        attributes: [[Stations.sequelize.fn('ST_DISTANCE', Stations.sequelize.fn('ST_GeomFromText', `POINT(${s_lat} ${s_lon})`),
+            Stations.sequelize.fn('ST_GeomFromText', `POINT(${a_lat} ${a_lon})`)), 'stationDistance']]
+    })
+};
+
 /* 2. 심부름 상세내역 보기 */
 async function showErrandDetail(req, res, next) {
     try {
@@ -203,36 +237,36 @@ async function getStationsErrands(req, res, next) {
 }
 
 /* 10. 관리자 페이지 : 입금 처리 */
-async function processDeposit(req, res, next){
-    try{
+async function processDeposit(req, res, next) {
+    try {
         // TODO : (DH) Html에서 errandsIdx를 input에서 입력받아서 url 쿼리에 넣을 수 있는지 알아보고는 수정하기
         let errandIdx = req.body.errandIdx;
         let result = await applyDeposit(errandIdx);
         resSucc(res, result);
-    }catch(err){
+    } catch (err) {
         next(err);
     }
 }
 
 /* 10_1 해당 심부름 상태 '매칭대기중'으로 수정 */
 const applyDeposit = (errandIdx) => {
-    return Errands.update( {errandStatus: '매칭대기중'}, {where: {errandIdx: errandIdx}, returning: true});
+    return Errands.update({errandStatus: '매칭대기중'}, {where: {errandIdx: errandIdx}, returning: true});
 };
 
 /* 11. 관리자 페이지 : 환불 처리 */
-async function processRefund(req, res, next){
-    try{
+async function processRefund(req, res, next) {
+    try {
         let errandIdx = req.body.errandIdx;
         let result = await applyRefund(errandIdx);
         resSucc(res, result);
-    }catch(err){
+    } catch (err) {
         next(err);
     }
 }
 
 /* 11_1 해당 심부름 상태 '취소완료'으로 수정 */
 const applyRefund = (errandIdx) => {
-    return Errands.update( {errandStatus: '취소완료'}, {where: {errandIdx: errandIdx}, returning: true});
+    return Errands.update({errandStatus: '취소완료'}, {where: {errandIdx: errandIdx}, returning: true});
 };
 
 async function addChats(req, res, next) {
@@ -257,40 +291,6 @@ async function addChats(req, res, next) {
     }
 }
 
-/* 1_1 DB에 심부름 등록 */
-const createErrand = (body, userIdx) => {
-    return new Promise(async (resolve, reject) => {
-        try {
-            let inputData = body;
-            inputData.requesterIdx = userIdx;
-            inputData.errandStatus = '입금대기중';
-
-            let s_location = await Stations.findById(body.startStationIdx, {attributes: ['stationLocation']});
-            let a_location = await Stations.findById(body.arrivalStationIdx, {attributes: ['stationLocation']});
-
-            let s_lat = s_location.dataValues.stationLocation.coordinates[0];
-            let s_lon = s_location.dataValues.stationLocation.coordinates[1];
-            let a_lat = a_location.dataValues.stationLocation.coordinates[0];
-            let a_lon = a_location.dataValues.stationLocation.coordinates[1];
-            let distances = await getDistance(s_lat, s_lon, a_lat, a_lon);
-            console.log(distances.dataValues.stationDistance * 111195);
-            inputData.stationDistance = distances.dataValues.stationDistance;
-
-            const result = await Errands.create(inputData);
-            resolve(result);
-        } catch (err) {
-            reject(err);
-        }
-    });
-};
-
-/* 1_2 지하철역 간의 거리 구하기 */
-const getDistance = (s_lat, s_lon, a_lat, a_lon) => {
-    return Stations.findOne({
-        attributes: [[Stations.sequelize.fn('ST_DISTANCE', Stations.sequelize.fn('ST_GeomFromText', `POINT(${s_lat} ${s_lon})`),
-            Stations.sequelize.fn('ST_GeomFromText', `POINT(${a_lat} ${a_lon})`)), 'stationDistance']]
-    })
-};
 
 /* 2_1 해당 심부름의 내역 가져오기 */
 const getErrandDetail = (errandIdx) => {
@@ -463,7 +463,7 @@ const getErrandList = (decode, startIdx, startStation, arrivalStation, order) =>
             await restResult.forEach(result => {
                 if (typeof result.dataValues.BOXES_TBs[0] === 'undefined') {
                     delete result.dataValues.BOXES_TBs;
-                }else {
+                } else {
                     result.dataValues.boxIdx = result.dataValues.BOXES_TBs[0].boxIdx;
                     delete result.dataValues.BOXES_TBs;
                 }
