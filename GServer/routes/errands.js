@@ -110,10 +110,11 @@ const getErrandDetail = (errandIdx) => {
                     include: [{model: Cancel, attributes: ['cancelReason']}],
                     where: {errandIdx: errandIdx}, attributes: inputData
                 });
-                await result.forEach(rs => {
-                    rs.dataValues.cancelReason = rs.dataValues.CANCEL_TBss[0].cancelReason;
-                    delete rs.dataValues.CANCEL_TBs_TBs;
-                });
+                // TODO : (DH) Local 연결되면 forEach 제대로 설정하기
+                // await result.forEach(rs => {
+                //     rs.dataValues.cancelReason = rs.dataValues.CANCEL_TBss[0].cancelReason;
+                //     delete rs.dataValues.CANCEL_TBs_TBs;
+                // });
             } else {
                 result = Errands.findOne({where: {errandIdx: errandIdx}, attributes: inputData});
             }
