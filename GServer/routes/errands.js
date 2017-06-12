@@ -179,7 +179,10 @@ async function rejectErrand(req, res, next) {
 /* 9. 지하철역에 따른 심부름 목록 불러오기*/
 async function getStationsErrands(req, res, next) {
     try {
-        let token = await tokenVerify(req.headers);
+        let decode = null;
+        if (req.headers.token) {
+            decode = await tokenVerify(req.headers);
+        }
         let startIdx = parseInt(req.query.index) - 1 || 0;
         let startStation = req.query.start;
         let arrivalStation = req.query.arrival;
@@ -192,7 +195,7 @@ async function getStationsErrands(req, res, next) {
             throw new Error('order value is not exist')
         }
 
-        let result = await getErrandList(token, startIdx, startStation, arrivalStation, order);
+        let result = await getErrandList(decode, startIdx, startStation, arrivalStation, order);
         resSucc(res, result);
     } catch (err) {
         next(err);
@@ -423,10 +426,10 @@ const cancelAdd = (token, errandIdx) => {
 };
 
 /* 9_1 조건에 맞는 심부록 목록 불러오기 */
-const getErrandList = (token, startIdx, startStation, arrivalStation, order) => {
+const getErrandList = (decode, startIdx, startStation, arrivalStation, order) => {
     return new Promise(async (resolve, reject) => {
         try {
-            let user = token.userIdx;
+            let user = decode ? decode.userIdx : null;
             let both = {startStationIdx: startStation, arrivalStationIdx: arrivalStation};
             let only = {startStationIdx: startStation};
             let stations = (!arrivalStation) ? only : both;
@@ -441,7 +444,7 @@ const getErrandList = (token, startIdx, startStation, arrivalStation, order) => 
             }
             const doingResult = await Errands.findAll({
                 include: [{model: Boxes, attributes: ['boxIdx']}],
-                where: [stations, {errandStatus: '진행중'}, {$or: [{requesterIdx: user}, {executorIdx: user}]}],
+                where: [{errandStatus: '진행중'}, {$or: [{requesterIdx: user}, {executorIdx: user}]}],
                 attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx',
                     'itemPrice', 'errandPrice', 'errandStatus']
             });
