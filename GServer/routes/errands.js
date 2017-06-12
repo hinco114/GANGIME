@@ -32,6 +32,9 @@ router.route('/errands/:errandsIdx/refund').post(processRefund);
 /* 1. 심부름 등록하기 */
 async function registerErrand(req, res, next) {
     try {
+        if (!req.body) {
+            throw new Error('Contents not exist');
+        }
         let body = req.body;
         let token = await tokenVerify(req.headers);
         let userIdx = token.userIdx;
@@ -78,26 +81,90 @@ const getDistance = (s_lat, s_lon, a_lat, a_lon) => {
 /* 2. 심부름 상세내역 보기 */
 async function showErrandDetail(req, res, next) {
     try {
-        let result = await getErrandDetail(req.params.errandIdx);
+        if (!req.params.errandIdx) {
+            throw new Error('errandIdx not exist');
+        }
+        let errandIdx = req.params.errandIdx;
+        let result = await getErrandDetail(errandIdx);
         resSucc(res, result);
     } catch (err) {
         next(err);
     }
 }
 
+/* 2_1 해당 심부름의 내역 가져오기 */
+const getErrandDetail = (errandIdx) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let inputData = ['requesterIdx', 'executorIdx', 'errandTitle', 'errandContent',
+                'startStationIdx', 'arrivalStationIdx', 'deadlineDt', 'itemPrice',
+                'errandPrice', 'errandStatus'];
+
+            let statusChk = await Errands.findOne({
+                where: {errandIdx: errandIdx}, attributes: ['errandStatus']
+            });
+
+            let result = null;
+            if (statusChk.dataValues.errandStatus === '취소완료') {
+                result = await Errands.findOne({
+                    include: [{model: Cancel, attributes: ['cancelReason']}],
+                    where: {errandIdx: errandIdx}, attributes: inputData
+                });
+                await result.forEach(result => {
+                    result.dataValues.cancelReason = result.dataValues.CANCEL_TBss[0].cancelReason;
+                    delete result.dataValues.CANCEL_TBs_TBs;
+                });
+            } else {
+                result = Errands.findOne({where: {errandIdx: errandIdx}, attributes: inputData});
+            }
+            resolve(result);
+        } catch (err) {
+            reject(err);
+        }
+    });
+};
+
 /* 3. 심부름 수정하기 */
 async function editErrand(req, res, next) {
     try {
+        if (!req.body) {
+            throw new Error('Contents not exist');
+        }
+        if (!req.params.errandIdx) {
+            throw new Error('errandIdx not exist');
+        }
         let body = req.body;
         let errandIdx = req.params.errandIdx;
-        let decode = await tokenVerify(req.headers);
-        const userIdx = decode.userIdx;
-        await sendNewErrand(body, errandIdx, userIdx);
+        let token = await tokenVerify(req.headers);
+        const userIdx = token.userIdx;
+        await editErrandContent(body, errandIdx, userIdx);
         resSucc(res, null);
     } catch (err) {
         next(err);
     }
 }
+
+/* 3_1 새로운 내용으로 심부름 수정하기 */
+const editErrandContent = (body, errandIdx, userIdx) => {
+    return new Promise(async (resolve, reject) => {
+        let result = null;
+        try {
+            let statusChk = await Errands.findOne({
+                where: {errandIdx: errandIdx}, attributes: ['errandStatus']
+            });
+
+            if (statusChk.dataValues.errandStatus === '입금대기중') {
+                result = Errands.update(
+                    body, {where: {requesterIdx: userIdx, errandIdx: errandIdx}, returning: true});
+                resolve(result);
+            } else {
+                throw new Error('Cannot edit contents');
+            }
+        } catch (err) {
+            reject(err);
+        }
+    });
+};
 
 /* 4. 상대방에게 심부름 취소 요청하기 */
 async function requestCancel(req, res, next) {
@@ -290,61 +357,6 @@ async function addChats(req, res, next) {
         next(err);
     }
 }
-
-
-/* 2_1 해당 심부름의 내역 가져오기 */
-const getErrandDetail = (errandIdx) => {
-    return new Promise(async (resolve, reject) => {
-        let inputData = ['requesterIdx', 'errandTitle', 'errandContent',
-            'startStationIdx', 'arrivalStationIdx', 'stationDistance',
-            'deadlineDt', 'itemPrice', 'errandPrice', 'errandStatus'];
-        let result = null;
-
-        try {
-            let statusChk = await Errands.findOne({
-                where: {errandIdx: errandIdx}, attributes: ['errandStatus']
-            });
-
-            if (statusChk.dataValues.errandStatus === '취소완료') { // status = "취소완료"일 때만 cancelReason 컬럼 반환
-                result = Errands.findOne({
-                    include: [{model: Cancel, attributes: ['cancelReason']}],
-                    where: {errandIdx: errandIdx},
-                    attributes: inputData
-                });
-            } else {
-                result = Errands.findOne({
-                    where: {errandIdx: errandIdx},
-                    attributes: inputData
-                });
-            }
-            resolve(result);
-        } catch (err) {
-            reject(err);
-        }
-    });
-};
-
-/* 3_1 새로운 내용으로 심부름 수정하기 */
-const sendNewErrand = (body, errandIdx, userIdx) => {
-    return new Promise(async (resolve, reject) => {
-        let result = null;
-        try {
-            let statusChk = await Errands.findOne({
-                where: {errandIdx: errandIdx}, attributes: ['errandStatus']
-            });
-
-            if (statusChk.dataValues.errandStatus === '입금대기') {
-                result = Errands.update(
-                    body, {where: {requesterIdx: userIdx, errandIdx: errandIdx}, returning: true});
-                resolve(result);
-            } else {
-                throw new Error('수정 불가능한 상태입니다');
-            }
-        } catch (err) {
-            reject(err);
-        }
-    });
-};
 
 /* 4_1 심부름 취소 요청 정보 등록하기 */
 const registerCancel = (userIdx, errandIdx, reason) => {
