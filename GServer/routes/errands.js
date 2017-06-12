@@ -16,7 +16,7 @@ router.route('/')
     .get(getStationsErrands);
 router.route('/:errandIdx')
     .get(showErrandDetail)
-    .put(editErrand);
+    .post(editErrand);
 router.route('/:errandIdx/cancel').post(requestCancel);
 router.route('/:errandIdx/star').post(evaluateErrand);
 router.route('/:errandIdx/ask').post(askErrand);

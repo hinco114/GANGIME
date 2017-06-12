@@ -49,7 +49,7 @@ async function getNearStation(req, res, next) {
 const findStation = (lat, lon) => {
     return Stations.findAll({
         limit: 1,
-        attributes: ['stationName'],
+        attributes: ['stationIdx'],
         order: [[Stations.sequelize.fn('ST_DISTANCE', Stations.sequelize.col('stationLocation'),
             Stations.sequelize.fn('ST_GeomFromText', `POINT(${lat} ${lon})`)), 'ASC']]
     })
