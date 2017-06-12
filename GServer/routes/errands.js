@@ -195,9 +195,7 @@ const registerCancelContent = (userIdx, errandIdx, reason) => {
                 where: {errandIdx: errandIdx},
                 attributes: ['requesterIdx', 'executorIdx']
             });
-            if (!findTarget) {
-                throw new Error('Cannot find users');
-            }
+            console.log(findTarget);
             let requesterIdx = findTarget.dataValues.requesterIdx;
             let executorIdx = findTarget.dataValues.executorIdx;
             let targetUserIdx = (requesterIdx === userIdx) ? executorIdx : requesterIdx;
