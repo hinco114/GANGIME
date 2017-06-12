@@ -183,7 +183,7 @@ async function getStationsErrands(req, res, next) {
         let startIdx = parseInt(req.query.index) - 1 || 0;
         let startStation = req.query.start;
         let arrivalStation = req.query.arrival;
-        let order = req.query.order;
+        let order = req.query.order || 'time';
 
         if (!startStation) {
             throw new Error('startStation value is not exist');
@@ -439,7 +439,6 @@ const getErrandList = (token, startIdx, startStation, arrivalStation, order) => 
             } else if (order === 'price') {
                 selectOrder = 'errandPrice';
             }
-
             const doingResult = await Errands.findAll({
                 include: [{model: Boxes, attributes: ['boxIdx']}],
                 where: [stations, {errandStatus: '진행중'}, {$or: [{requesterIdx: user}, {executorIdx: user}]}],
@@ -450,7 +449,7 @@ const getErrandList = (token, startIdx, startStation, arrivalStation, order) => 
             const restResult = await Errands.findAll({
 
                 include: [{model: Boxes, attributes: ['boxIdx']}],
-                where: [stations, {errandStatus: '입금대기중'}],
+                where: [stations, {errandStatus: '매칭대기중'}],
                 attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx',
                     'itemPrice', 'errandPrice', 'errandStatus'],
                 order: [[selectOrder, 'DESC']]
