@@ -222,9 +222,9 @@ async function getStationsErrands(req, res, next) {
         let arrivalStation = req.query.arrival;
         let order = req.query.order || 'time';
 
-        if (!startStation) {
-            throw new Error('startStation value is not exist');
-        }
+        // if (!startStation) {
+        //     throw new Error('startStation value is not exist');
+        // }
         if (!order) {
             throw new Error('order value is not exist')
         }
@@ -448,15 +448,18 @@ const getErrandList = (decode, startIdx, startStation, arrivalStation, order) =>
                 attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx',
                     'itemPrice', 'errandPrice', 'errandStatus']
             });
-
-            const restResult = await Errands.findAll({
+            let condition = {
 
                 include: [{model: Boxes, attributes: ['boxIdx']}],
                 where: [stations, {errandStatus: '매칭대기중'}],
                 attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx',
                     'itemPrice', 'errandPrice', 'errandStatus'],
                 order: [[selectOrder, 'DESC']]
-            });
+            };
+            if (!startStation) {
+                delete condition.where[0];
+            }
+            const restResult = await Errands.findAll(condition);
 
             // TODO : (DH) 페이지네이션 제대로 설정하기 => slice 사용(6번. 채팅 참고하기
             let result = await doingResult.concat(restResult);
