@@ -461,9 +461,15 @@ async function loadFavoriteStations(req, res, next) {
 
 /* 6_1  DB에서 관심 지하철역들 불러오기 */
 const getFavoriteStations = (userIdx) => {
-    return UserStation.findAll({
-        attributes: ['stationIdx'],
-        where: {userIdx: userIdx}
+    return new Promise((resolve, reject) => {
+        try{
+            let stations = UserStation.findAll({
+                where: {userIdx: userIdx}, attributes: ['stationIdx']
+            });
+            resolve(stations);
+        } catch(err){
+            reject(err);
+        }
     });
 };
 
