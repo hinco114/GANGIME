@@ -110,9 +110,9 @@ const getErrandDetail = (errandIdx) => {
                     include: [{model: Cancel, attributes: ['cancelReason']}],
                     where: {errandIdx: errandIdx}, attributes: inputData
                 });
-                await result.forEach(result => {
-                    result.dataValues.cancelReason = result.dataValues.CANCEL_TBss[0].cancelReason;
-                    delete result.dataValues.CANCEL_TBs_TBs;
+                await result.forEach(rs => {
+                    rs.dataValues.cancelReason = rs.dataValues.CANCEL_TBss[0].cancelReason;
+                    delete rs.dataValues.CANCEL_TBs_TBs;
                 });
             } else {
                 result = Errands.findOne({where: {errandIdx: errandIdx}, attributes: inputData});
@@ -472,6 +472,7 @@ const getErrandList = (decode, startIdx, startStation, arrivalStation, order) =>
                 delete condition.where[0];
             }
             const restResult = await Errands.findAll(condition);
+            // TODO : (DH) concat 및 다시 작업진행하기
 
             // TODO : (DH) 페이지네이션 제대로 설정하기 => slice 사용(6번. 채팅 참고하기
             let result = await doingResult.concat(restResult);
