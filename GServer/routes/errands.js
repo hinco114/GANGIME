@@ -199,6 +199,7 @@ const registerCancelContent = (userIdx, errandIdx, reason) => {
             let requesterIdx = findTarget.dataValues.requesterIdx;
             let executorIdx = findTarget.dataValues.executorIdx;
             let targetUserIdx = (requesterIdx === userIdx) ? executorIdx : requesterIdx;
+            console.log(targetUserIdx);
 
             await Cancel.create({errandIdx: errandIdx, targetUserIdx: targetUserIdx, cancelReason: reason});
             let changeStatus = await Errands.update(
