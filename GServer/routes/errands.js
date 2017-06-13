@@ -153,8 +153,6 @@ const editErrandContent = (body, errandIdx, userIdx) => {
 };
 
 /* 4. 상대방에게 심부름 취소 요청하기 */
-// TODO : (DH) 심부름 취소 요청을 할 때 사유를 적는데, 이 API를 결제이전에 취소할 때도 사용하는건지? 그리고 우리 table 같은 경우 targetUserIdx가 있다는 거 + NN
-// TODO : (DH) 취소 요청을 한 후에도 스케줄러를 통해서 5분 진행되어야하는지?
 async function requestCancelErrand(req, res, next) {
     try {
         if (!req.body.cancelReason) {
@@ -283,14 +281,18 @@ async function acceptErrand(req, res, next) {
     }
 }
 
-// TODO : (DH) 해당 기능들은 5분이 지난 후에는 실행이 불가능해야하는데... 어떻게 하지
 /* 8. 심부름 요청 거절 */
 async function rejectErrandRequest(req, res, next) {
     try {
-        // TODO : (DH) 요청 승낙하면 status가 변경되는지??
+        // TODO : (DH) '7. 심부름 요청 승낙'하면 status가 변경되는지 체크하기
         const token = await tokenVerify(req.headers);
         const userIdx = token.userIdx;
         const errandIdx = req.params.errandIdx;
+        const chkStatus = await Errands.findById(errandIdx, {attributes: ['errandStatus']});
+        if (chkStatus.dataValues.errandStatus === '매칭대기중') {
+            throw new Error('Time already gone');
+        }
+
         const result = await rejectRequester(userIdx, errandIdx);
         if (result[0] === 1) {
             res.send({msg: 'success'});
