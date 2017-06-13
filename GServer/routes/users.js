@@ -30,8 +30,8 @@ router.route('/login').post(signIn);
 router.route('/resetPass').post(resetPass);
 router.route('/boxes')
     .get(getBoxList)
-    .post(storeErrand)
-    .delete(deleteBoxItem);
+    .post(storeErrand);
+router.route('/boxes/delete').post(deleteBoxErrand);
 router.route('/fcm').post(registerFcm);
 router.route('/accounts').post(addAccount);
 router.route('/histories').get(showHistories);
@@ -380,10 +380,12 @@ const addCode = (email, code) => {
 /* 1. 심부름 찜하기 */
 async function storeErrand(req, res, next) {
     try {
+        if (!req.body.errandIdx) {
+            throw new Error('errandidx not exist')
+        }
         const decode = await tokenVerify(req.headers);
         const userIdx = decode.userIdx;
-        let errandIdx = req.body.errandIdx;
-
+        const errandIdx = req.body.errandIdx;
         let result = await putIntoBox(userIdx, errandIdx);
         resSucc(res, result);
     } catch (err) {
@@ -391,33 +393,83 @@ async function storeErrand(req, res, next) {
     }
 }
 
+/* 1_1 선택한 심부름 찜하기 */
+const putIntoBox = (userIdx, errandIdx) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const chkExist = await Boxes.findOne({
+                where: {userIdx: userIdx, errandIdx: errandIdx}
+            });
+            console.log(chkExist);
+            if (chkExist === null) {
+                const result = Boxes.create({userIdx: userIdx, errandIdx: errandIdx});
+                resolve(result);
+            } else {
+                throw new Error('Already stored');
+            }
+        } catch (err) {
+            reject(err);
+        }
+    });
+};
+
 /* 2. 심부름 찜한 목록 보기 */
 async function getBoxList(req, res, next) {
     try {
-        let startIdx = parseInt(req.query.index) || 1;
-        let endIdx = startIdx + 2;
-        const decode = await tokenVerify(req.headers);
-        const userIdx = decode.userIdx;
-        let result = await findBoxes(startIdx, endIdx, userIdx);
+        // TODO : (DH) 페이지네이션
+        const startIdx = req.query.index || 1;
+        const endIdx = startIdx + 2;
+        const token = await tokenVerify(req.headers);
+        const userIdx = token.userIdx;
+        let result = await findBoxeErrands(startIdx, endIdx, userIdx);
         resSucc(res, result);
     } catch (err) {
         next(err);
     }
 }
 
-/* 3. 심부름 찜한 목록 삭제하기 */
-async function deleteBoxItem(req, res, next) {
-    try {
-        const decode = await tokenVerify(req.headers);
-        const userIdx = decode.userIdx;
-        let errandIdx = req.body.errandIdx;
+/* 2_1  찜한 전체 심부름 목록 가져오기 */
+const findBoxeErrands = (startIdx, endIdx, userIdx) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            await  Errands.sequelize.query("DELETE B FROM BOXES_TB AS B JOIN ERRANDS_TB AS E ON B.errandIdx=E.errandIdx WHERE E.errandStatus!='매칭대기중';");
+            const result = await Boxes.findAll({
+                offset: startIdx - 1,
+                limit: 5, // TODO : (DH) 페이지네이션에 알맞게 변경하기
+                where: {userIdx: userIdx},
+                attributes: ['errandIdx'],
+                include: [{
+                    model: Errands, attributes: ['errandIdx', 'errandTitle',
+                        'startStationIdx', 'arrivalStationIdx', 'errandPrice', 'itemPrice']
+                }]
+            });
+            resolve(result);
+        } catch (err) {
+            reject(err);
+        }
+    })
+};
 
+/* 3. 심부름 찜한 목록 삭제하기 */
+async function deleteBoxErrand(req, res, next) {
+    try {
+        if (!req.body.errandIdx) {
+            throw new Error('errandIdx not exist');
+        }
+        const token = await tokenVerify(req.headers);
+        const userIdx = token.userIdx;
+        const errandIdx = req.body.errandIdx;
         let result = await deleteErrand(userIdx, errandIdx);
         resSucc(res, result);
     } catch (err) {
         next(err);
     }
 }
+
+/* 3_1 선택한 심부름 삭제하기 */
+const deleteErrand = (userIdx, errandIdx) => {
+    return Boxes.destroy({where: {errandIdx: errandIdx, userIdx: userIdx}});
+};
 
 /* 4. FCM 등록하기 */
 async function registerFcm(req, res, next) {
@@ -477,64 +529,6 @@ const getFavoriteStations = (userIdx) => {
     //         reject(err);
     //     }
     // });
-};
-
-/* 1_1 선택한 심부름 찜하기 */
-const putIntoBox = (userIdx, errandIdx) => {
-    return new Promise(async (resolve, reject) => {
-        // TODO : (DH) async-await식으로 다시 변경하기
-        const chkExist = await Boxes.findOne({
-            where: {userIdx: userIdx, errandIdx: errandIdx}
-        }).then((chkExist) => {
-            if (chkExist === null) {
-                const result = Boxes.create({userIdx: userIdx, errandIdx: errandIdx});
-                resolve(result);
-            } else {
-                throw new Error('이미 찜한 심부름입니다');
-            }
-        }).catch((err) => {
-            reject(err);
-        });
-    });
-};
-
-/* 2_1  찜한 전체 심부름 목록 가져오기 */
-const findBoxes = (startIdx, endIdx, userIdx) => {
-    return new Promise((resolve, reject) => {
-        const result = Boxes.findAll({
-            offset: startIdx - 1,
-            limit: 5, // TODO : (DH) 페이지
-            where: {userIdx: userIdx},
-            attributes: ['errandIdx'],
-            include: [{
-                model: Errands, attributes: ['errandIdx', 'errandTitle',
-                    'startStationIdx', 'arrivalStationIdx', 'errandPrice', 'itemPrice']
-            }]
-        });
-
-        if (result) {
-            resolve(result);
-        }
-        else {
-            reject('error');
-        }
-    })
-};
-
-/* 3_1 선택한 심부름 삭제하기 */
-const deleteErrand = (userIdx, errandIdx) => {
-    return new Promise((resolve, reject) => {
-        const result = Boxes.destroy({
-            where: {errandIdx: errandIdx, userIdx: userIdx}
-        });
-
-        if (result) {
-            resolve(result);
-        }
-        else {
-            reject('error');
-        }
-    })
 };
 
 /* 4_1 FCM 토큰 정보 저장하기 */

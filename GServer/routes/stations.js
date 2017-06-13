@@ -18,24 +18,13 @@ async function getStationList(req, res, next) {
 
 /* 1_1 모든 지하철 정보 가져오기 */
 const getAllList = () => {
-    return Stations.findAll({ attributes: ['stationIdx', 'stationName', 'stationLocation']});
-    // return new Promise((resolve, reject) => {
-    //     try {
-    //         const stations = Stations.findAll({
-    //             attributes: ['stationIdx', 'stationName', 'stationLocation']
-    //         });
-    //         resolve(stations);
-    //     } catch (err) {
-    //         reject(err);
-    //     }
-    // });
+    return Stations.findAll({attributes: ['stationIdx', 'stationName', 'stationLocation']});
 };
 
 /* 2. 가까운 역 찾기 */
 async function getNearStation(req, res, next) {
     try {
-        console.log(req.body.lat);
-        if(!req.body.lat || !req.body.lon){
+        if (!req.body.lat || !req.body.lon) {
             throw new Error('Location not exist');
         }
         const lat = req.body.lat;
