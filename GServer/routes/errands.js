@@ -339,7 +339,6 @@ const getErrandList = (decode, startIdx, startStation, arrivalStation, order) =>
     return new Promise(async (resolve, reject) => {
         try {
             const user = decode ? decode.userIdx : null;
-            const non = {}; // TODO : (DH) 이게 되는지 체크해보기, 아님 아래 자겁이 되는지 체크
             const both = {startStationIdx: startStation, arrivalStationIdx: arrivalStation};
             const only = {startStationIdx: startStation};
             const selectStation = (!arrivalStation) ? only : both;
@@ -353,12 +352,19 @@ const getErrandList = (decode, startIdx, startStation, arrivalStation, order) =>
                 selectOrder = 'errandPrice'; // TODO : (DH) 심부름 + 물품 가격의 합 구하는 법(+ 역할)
             }
 
-            const userDoing = await Errands.findAll({
+            let userDoing = {
                 include: [{model: Boxes, attributes: ['boxIdx']}],
-                where: [{errandStatus: '진행중'}, {$or: [{requesterIdx: user}, {executorIdx: user}]}],
+                where: [selectStation, {errandStatus: '진행중'}, {$or: [{requesterIdx: user}, {executorIdx: user}]}],
                 attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx', 'deadlineDt',
                     'itemPrice', 'errandPrice', 'errandStatus']
-            });
+            };
+            if (!startStation) {
+                delete userDoing.where[0];
+            }
+            if (!user) { // TODO : (DH) 진행중이 없는 경우에는 어떻게 나오는지 체크해보기
+                delete userDoing.where[2];
+            }
+            const doingResult = await Errands.findAll(userDoing);
 
             let byStations = {
                 include: [{model: Boxes, attributes: ['boxIdx']}],
@@ -373,10 +379,10 @@ const getErrandList = (decode, startIdx, startStation, arrivalStation, order) =>
             const restResult = await Errands.findAll(byStations);
 
             // TODO : (DH) 페이지네이션 제대로 설정하기 => slice 사용(6번. 채팅 참고하기)
-            let result = await userDoing.concat(restResult);
-            await restResult.forEach(result => {
+            let result = await doingResult.concat(restResult);
+            await result.forEach(result => {
                 if (typeof result.dataValues.BOXES_TBs[0] === 'undefined') {
-                    result.dataValues.boxIdx = null; // TODO : (DH)  이것도 실행되는지 체크하기
+                    result.dataValues.boxIdx = null;
                     delete result.dataValues.BOXES_TBs;
                 } else {
                     result.dataValues.boxIdx = result.dataValues.BOXES_TBs[0].boxIdx;
