@@ -492,19 +492,46 @@ const addFcm = (userIdx, fcmToken) => {
     return Users.update({fcmToken: fcmToken}, {where: {userIdx: userIdx}});
 };
 
-/* 5. 심부름 내역 보기 */
+/* 5. 심부름 내역 보기(수행,요청) */
 async function showHistories(req, res, next) {
     try {
+        if (!req.query.category) {
+            throw new Error('category not exist');
+        }
         const token = await tokenVerify(req.headers);
-        let startIdx = parseInt(req.query.index) - 1 || 0;
-        let category = req.query.category;
-
-        let result = await getAllHistories(token, startIdx, category);
+        const userIdx = token.userIdx;
+        const startIdx = parseInt(req.query.index) - 1 || 0;
+        const category = req.query.category;
+        let result = await getAllHistories(userIdx, startIdx, category);
         res.send({msg: 'success', data: result});
     } catch (err) {
         next(err);
     }
 }
+
+
+/* 5_1 수행 또는 요청 심부름 내역 가져오기 */
+const getAllHistories = (userIdx, startIdx, category) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let requester = "requesterIdx = " + userIdx;
+            let executor = "executorIdx = " + userIdx;
+            let role = null;
+            if (category === "execute") {
+                role = executor;
+            } else if (category === "request") {
+                role = requester;
+            }
+
+            const result = await Errands.sequelize.query("SELECT errandIdx, errandTitle, startStationIdx, arrivalStationIdx, deadlineDt, itemPrice, errandPrice, errandStatus " +
+                "FROM ERRANDS_TB WHERE " + role + " ORDER BY CASE WHEN errandStatus='수행중' THEN 1 ELSE 2 END, createdAt DESC LIMIT 10 OFFSET " + startIdx).spread((result, metadata) => {
+                resolve(result);
+            });
+        } catch (err) {
+            reject(err);
+        }
+    });
+};
 
 /* 6. 관심 지하철역 불러오기 */
 async function loadFavoriteStations(req, res, next) {
@@ -526,42 +553,6 @@ async function loadFavoriteStations(req, res, next) {
 /* 6_1  DB에서 관심 지하철역들 불러오기 */
 const getFavoriteStations = (userIdx) => {
     return UserStation.findAll({where: {userIdx: userIdx}, attributes: ['stationIdx']});
-    // return new Promise((resolve, reject) => {
-    //     try{
-    //         const stations = UserStation.findAll({
-    //             where: {userIdx: userIdx}, attributes: ['stationIdx']
-    //         });
-    //         resolve(stations);
-    //     } catch(err){
-    //         reject(err);
-    //     }
-    // });
-};
-
-/* 5_1 수행 또는 요청 심부름 내역 가져오기 */
-const getAllHistories = (token, startIdx, category) => {
-    return new Promise((resolve, reject) => {
-            let user = token.userIdx;
-            let requester = "requesterIdx = " + user;
-            let executor = "executorIdx = " + user;
-
-            let role = null;
-            if (category === "수행") {
-                role = executor;
-            } else if (category === "요청") {
-                role = requester;
-            }
-
-            try {
-                const result = Errands.sequelize.query("SELECT errandIdx, errandTitle, startStationIdx, arrivalStationIdx, deadlineDt, itemPrice, errandPrice, errandStatus " +
-                    "FROM ERRANDS_TB WHERE " + role + " ORDER BY CASE WHEN errandStatus='수행중' THEN 1 ELSE 2 END, createdAt DESC LIMIT 10 OFFSET " + startIdx).spread((res, metadata) => {
-                    resolve(res);
-                });
-            } catch (err) {
-                reject(err);
-            }
-        }
-    )
 };
 
 const uploadToS3 = (itemKey, readStream, mimetype) => {
