@@ -32,9 +32,6 @@ router.route('/errands/:errandsIdx/refund').post(processRefund);
 /* 1. 심부름 등록하기 */
 async function registerErrand(req, res, next) {
     try {
-        if (!req.body) {
-            throw new Error('Contents not exist');
-        }
         const body = req.body;
         const token = await tokenVerify(req.headers);
         const userIdx = token.userIdx;
@@ -55,14 +52,12 @@ const createErrand = (body, userIdx) => {
             const s_lon = s_location.dataValues.stationLocation.coordinates[1];
             const a_lat = a_location.dataValues.stationLocation.coordinates[0];
             const a_lon = a_location.dataValues.stationLocation.coordinates[1];
-            // TODO : (DH) degree => meter로 변환
             const distances = await getDistance(s_lat, s_lon, a_lat, a_lon);
 
             let inputData = body;
             inputData.requesterIdx = userIdx;
             inputData.errandStatus = '입금대기중';
-            inputData.stationDistance = distances.dataValues.stationDistance;
-
+            inputData.stationDistance = parseInt(distances.dataValues.stationDistance * 111195);
             const result = await Errands.create(inputData);
             resolve(result);
         } catch (err) {
@@ -82,9 +77,6 @@ const getDistance = (s_lat, s_lon, a_lat, a_lon) => {
 /* 2. 심부름 상세내역 보기 */
 async function showErrandDetail(req, res, next) {
     try {
-        if (!req.params.errandIdx) {
-            throw new Error('errandIdx not exist');
-        }
         const errandIdx = req.params.errandIdx;
         const result = await getErrandDetail(errandIdx);
         resSucc(res, result);
@@ -111,11 +103,8 @@ const getErrandDetail = (errandIdx) => {
                     include: [{model: Cancel, attributes: ['cancelReason']}],
                     where: {errandIdx: errandIdx}, attributes: inputData
                 });
-                // TODO : (DH) Local 연결되면 forEach 제대로 설정하기
-                // await result.forEach(rs => {
-                //     rs.dataValues.cancelReason = rs.dataValues.CANCEL_TBss[0].cancelReason;
-                //     delete rs.dataValues.CANCEL_TBs_TBs;
-                // });
+                result.dataValues.cancelReason = result.dataValues.CANCEL_TBs[0].cancelReason;
+                delete result.dataValues.CANCEL_TBs;
             } else {
                 result = Errands.findOne({where: {errandIdx: errandIdx}, attributes: inputData});
             }
@@ -129,17 +118,12 @@ const getErrandDetail = (errandIdx) => {
 /* 3. 심부름 수정하기 */
 async function editErrand(req, res, next) {
     try {
-        if (!req.body) {
-            throw new Error('Contents not exist');
-        }
-        if (!req.params.errandIdx) {
-            throw new Error('errandIdx not exist');
-        }
         const body = req.body;
         const errandIdx = req.params.errandIdx;
         const token = await tokenVerify(req.headers);
         const userIdx = token.userIdx;
-        await editErrandContent(body, errandIdx, userIdx);
+        const result = await editErrandContent(body, errandIdx, userIdx);
+        console.log(result);
         resSucc(res, null);
     } catch (err) {
         next(err);
@@ -149,18 +133,17 @@ async function editErrand(req, res, next) {
 /* 3_1 새로운 내용으로 심부름 수정하기 */
 const editErrandContent = (body, errandIdx, userIdx) => {
     return new Promise(async (resolve, reject) => {
-        let result = null;
         try {
             const statusChk = await Errands.findOne({
                 where: {errandIdx: errandIdx}, attributes: ['errandStatus']
             });
 
             if (statusChk.dataValues.errandStatus === '입금대기중') {
-                result = Errands.update(
+                let result = Errands.update(
                     body, {where: {requesterIdx: userIdx, errandIdx: errandIdx}, returning: true});
                 resolve(result);
             } else {
-                throw new Error('Cannot edit contents');
+                throw new Error('Cannot edit errand');
             }
         } catch (err) {
             reject(err);

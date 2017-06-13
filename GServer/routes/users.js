@@ -454,6 +454,7 @@ async function loadFavoriteStations(req, res, next) {
         const userIdx = token.userIdx;
         const result = await getFavoriteStations(userIdx);
         let stationArr = [];
+        console.log(result);
         await result.forEach(result => {
             stationArr.push(result.dataValues.stationIdx);
         });
