@@ -21,7 +21,7 @@ router.route('/:errandIdx/cancel').post(requestCancelErrand);
 router.route('/:errandIdx/star').post(evaluateErrand);
 router.route('/:errandIdx/ask').post(askExecuteErrand);
 router.route('/:errandIdx/accept').post(acceptErrand);
-router.route('/:errandIdx/reject').post(rejectErrand);
+router.route('/:errandIdx/reject').post(rejectErrandRequest);
 router.route('/:errandIdx/chats')
     .post(addChats)
     .get(getChats);
@@ -153,11 +153,10 @@ const editErrandContent = (body, errandIdx, userIdx) => {
 };
 
 /* 4. 상대방에게 심부름 취소 요청하기 */
+// TODO : (DH) 심부름 취소 요청을 할 때 사유를 적는데, 이 API를 결제이전에 취소할 때도 사용하는건지? 그리고 우리 table 같은 경우 targetUserIdx가 있다는 거 + NN
+// TODO : (DH) 취소 요청을 한 후에도 스케줄러를 통해서 5분 진행되어야하는지?
 async function requestCancelErrand(req, res, next) {
     try {
-        if (!req.params.errandIdx) {
-            throw new Error('errandIdx not exist');
-        }
         if (!req.body.cancelReason) {
             throw new Error('cancelReason not exist');
         }
@@ -199,11 +198,14 @@ const registerCancelContent = (userIdx, errandIdx, reason) => {
 /* 5. 심부름 평가하기  */
 async function evaluateErrand(req, res, next) {
     try {
-        let decode = await tokenVerify(req.headers);
-        const userIdx = decode.userIdx;
-        let errandIdx = req.params.errandIdx;
-        let point = parseInt(req.body.stars);
-        let result = await addStars(userIdx, errandIdx, point);
+        if (req.body.stars) {
+            throw new Error('point not exist');
+        }
+        const token = await tokenVerify(req.headers);
+        const userIdx = token.userIdx;
+        const errandIdx = req.params.errandIdx;
+        const point = parseInt(req.body.stars);
+        const result = await addStars(userIdx, errandIdx, point);
         resSucc(res, result);
     } catch (err) {
         next(err);
@@ -212,14 +214,7 @@ async function evaluateErrand(req, res, next) {
 
 /* 5_1 평가 테이블에 점수 입력하기 */
 const addStars = (userIdx, errandIdx, point) => {
-    return new Promise((resolve, reject) => {
-        try {
-            const result = Stars.create({userIdx: userIdx, errandIdx: errandIdx, point: point});
-            resolve(result);
-        } catch (err) {
-            reject(err);
-        }
-    })
+    return Stars.create({userIdx: userIdx, errandIdx: errandIdx, point: point});
 };
 
 /* 6. 심부름 수행 요청 */
@@ -288,18 +283,33 @@ async function acceptErrand(req, res, next) {
     }
 }
 
+// TODO : (DH) 해당 기능들은 5분이 지난 후에는 실행이 불가능해야하는데... 어떻게 하지
 /* 8. 심부름 요청 거절 */
-async function rejectErrand(req, res, next) {
+async function rejectErrandRequest(req, res, next) {
     try {
-        let token = await tokenVerify(req.headers);
+        // TODO : (DH) 요청 승낙하면 status가 변경되는지??
+        const token = await tokenVerify(req.headers);
         const userIdx = token.userIdx;
-        let errandIdx = req.params.errandIdx;
-        let result = await cancelAdd(userIdx, errandIdx);
-        resSucc(res, result);
+        const errandIdx = req.params.errandIdx;
+        const result = await rejectRequester(userIdx, errandIdx);
+        if (result[0] === 1) {
+            res.send({msg: 'success'});
+        }
     } catch (err) {
         next(err);
     }
 }
+
+/* 8_1 요청이 들어온 심부름 거절하기 */
+const rejectRequester = (userIdx, errandIdx) => {
+    return Errands.update({executorIdx: null}, {
+        where: {
+            errandIdx: errandIdx,
+            requesterIdx: userIdx,
+            errandStatus: '신청진행중'
+        }
+    });
+};
 
 /* 9. 지하철역에 따른 심부름 목록 불러오기*/
 async function getStationsErrands(req, res, next) {
@@ -308,32 +318,87 @@ async function getStationsErrands(req, res, next) {
         if (req.headers.token) {
             decode = await tokenVerify(req.headers);
         }
-        let startIdx = parseInt(req.query.index) - 1 || 0;
-        let startStation = req.query.start;
-        let arrivalStation = req.query.arrival;
-        let order = req.query.order || 'time';
-
-        // if (!startStation) {
-        //     throw new Error('startStation value is not exist');
-        // }
-        if (!order) {
-            throw new Error('order value is not exist')
+        // TODO : (DH) 페이지네이션
+        const startIdx = req.query.index - 1 || 0;
+        if (!req.query.start && req.query.arrival) {
+            throw new Error('You must enter arrivalStation');
         }
+        const startStation = req.query.start;
+        const arrivalStation = req.query.arrival;
+        const order = req.query.order || 'time';
 
-        let result = await getErrandList(decode, startIdx, startStation, arrivalStation, order);
+        const result = await getErrandList(decode, startIdx, startStation, arrivalStation, order);
         resSucc(res, result);
     } catch (err) {
         next(err);
     }
 }
 
+/* 9_1 조건에 맞는 심부록 목록 불러오기 */
+const getErrandList = (decode, startIdx, startStation, arrivalStation, order) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const user = decode ? decode.userIdx : null;
+            const non = {}; // TODO : (DH) 이게 되는지 체크해보기, 아님 아래 자겁이 되는지 체크
+            const both = {startStationIdx: startStation, arrivalStationIdx: arrivalStation};
+            const only = {startStationIdx: startStation};
+            const selectStation = (!arrivalStation) ? only : both;
+
+            let selectOrder = null;
+            if (order === 'time') {
+                selectOrder = 'createdAt';
+            } else if (order === 'distance') {
+                selectOrder = 'stationDistance';
+            } else if (order === 'price') {
+                selectOrder = 'errandPrice'; // TODO : (DH) 심부름 + 물품 가격의 합 구하는 법(+ 역할)
+            }
+
+            const userDoing = await Errands.findAll({
+                include: [{model: Boxes, attributes: ['boxIdx']}],
+                where: [{errandStatus: '진행중'}, {$or: [{requesterIdx: user}, {executorIdx: user}]}],
+                attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx', 'deadlineDt',
+                    'itemPrice', 'errandPrice', 'errandStatus']
+            });
+
+            let byStations = {
+                include: [{model: Boxes, attributes: ['boxIdx']}],
+                where: [selectStation, {errandStatus: '매칭대기중'}],
+                attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx', 'deadlineDt',
+                    'itemPrice', 'errandPrice', 'errandStatus'],
+                order: [[selectOrder, 'DESC']]
+            };
+            if (!startStation) {
+                delete byStations.where[0];
+            }
+            const restResult = await Errands.findAll(byStations);
+
+            // TODO : (DH) 페이지네이션 제대로 설정하기 => slice 사용(6번. 채팅 참고하기)
+            let result = await userDoing.concat(restResult);
+            await restResult.forEach(result => {
+                if (typeof result.dataValues.BOXES_TBs[0] === 'undefined') {
+                    result.dataValues.boxIdx = null; // TODO : (DH)  이것도 실행되는지 체크하기
+                    delete result.dataValues.BOXES_TBs;
+                } else {
+                    result.dataValues.boxIdx = result.dataValues.BOXES_TBs[0].boxIdx;
+                    delete result.dataValues.BOXES_TBs;
+                }
+            });
+            resolve(result);
+        } catch (err) {
+            reject(err);
+        }
+    })
+};
+
 /* 10. 관리자 페이지 : 입금 처리 */
 async function processDeposit(req, res, next) {
     try {
         // TODO : (DH) Html에서 errandsIdx를 input에서 입력받아서 url 쿼리에 넣을 수 있는지 알아보고는 수정하기
-        let errandIdx = req.body.errandIdx;
-        let result = await applyDeposit(errandIdx);
-        resSucc(res, result);
+        const errandIdx = req.body.errandIdx;
+        const result = await applyDeposit(errandIdx);
+        if (result[0] === 1) {
+            res.send({msg: 'success'});
+        }
     } catch (err) {
         next(err);
     }
@@ -341,15 +406,17 @@ async function processDeposit(req, res, next) {
 
 /* 10_1 해당 심부름 상태 '매칭대기중'으로 수정 */
 const applyDeposit = (errandIdx) => {
-    return Errands.update({errandStatus: '매칭대기중'}, {where: {errandIdx: errandIdx}, returning: true});
+    return Errands.update({errandStatus: '매칭대기중'}, {where: {errandIdx: errandIdx}});
 };
 
 /* 11. 관리자 페이지 : 환불 처리 */
 async function processRefund(req, res, next) {
     try {
-        let errandIdx = req.body.errandIdx;
-        let result = await applyRefund(errandIdx);
-        resSucc(res, result);
+        const errandIdx = req.body.errandIdx;
+        const result = await applyRefund(errandIdx);
+        if (result[0] === 1) {
+            res.send({msg: 'success'});
+        }
     } catch (err) {
         next(err);
     }
@@ -357,7 +424,7 @@ async function processRefund(req, res, next) {
 
 /* 11_1 해당 심부름 상태 '취소완료'으로 수정 */
 const applyRefund = (errandIdx) => {
-    return Errands.update({errandStatus: '취소완료'}, {where: {errandIdx: errandIdx}, returning: true});
+    return Errands.update({errandStatus: '취소완료'}, {where: {errandIdx: errandIdx}});
 };
 
 /* 12. 채팅내용 가져오기 */
@@ -415,73 +482,5 @@ async function addChats(req, res, next) {
         next(err);
     }
 }
-
-/* 8_1 요청이 들어온 심부름 거절하기 */
-const cancelAdd = (userIdx, errandIdx) => {
-    return new Promise(async (resolve, reject) => {
-        // TODO : (DH) userIdx 왜 받아오는지
-        try {
-            let cancelExecutor = await Errands.update(
-                {executorIdx: null}, {where: {errandIdx: errandIdx, errandStatus: '신청진행중'}, returning: true});
-            resolve(cancelExecutor);
-        } catch (err) {
-            reject(err);
-        }
-    })
-};
-
-/* 9_1 조건에 맞는 심부록 목록 불러오기 */
-const getErrandList = (decode, startIdx, startStation, arrivalStation, order) => {
-    return new Promise(async (resolve, reject) => {
-        try {
-            let user = decode ? decode.userIdx : null;
-            let both = {startStationIdx: startStation, arrivalStationIdx: arrivalStation};
-            let only = {startStationIdx: startStation};
-            let stations = (!arrivalStation) ? only : both;
-
-            let selectOrder = null;
-            if (order === 'time') {
-                selectOrder = 'createdAt';
-            } else if (order === 'distance') {
-                selectOrder = 'stationDistance';
-            } else if (order === 'price') {
-                selectOrder = 'errandPrice';
-            }
-            const doingResult = await Errands.findAll({
-                include: [{model: Boxes, attributes: ['boxIdx']}],
-                where: [{errandStatus: '진행중'}, {$or: [{requesterIdx: user}, {executorIdx: user}]}],
-                attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx', 'deadlineDt',
-                    'itemPrice', 'errandPrice', 'errandStatus']
-            });
-            let condition = {
-
-                include: [{model: Boxes, attributes: ['boxIdx']}],
-                where: [stations, {errandStatus: '매칭대기중'}],
-                attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx', 'deadlineDt',
-                    'itemPrice', 'errandPrice', 'errandStatus'],
-                order: [[selectOrder, 'DESC']]
-            };
-            if (!startStation) {
-                delete condition.where[0];
-            }
-            const restResult = await Errands.findAll(condition);
-            // TODO : (DH) concat 및 다시 작업진행하기
-
-            // TODO : (DH) 페이지네이션 제대로 설정하기 => slice 사용(6번. 채팅 참고하기
-            let result = await doingResult.concat(restResult);
-            await restResult.forEach(result => {
-                if (typeof result.dataValues.BOXES_TBs[0] === 'undefined') {
-                    delete result.dataValues.BOXES_TBs;
-                } else {
-                    result.dataValues.boxIdx = result.dataValues.BOXES_TBs[0].boxIdx;
-                    delete result.dataValues.BOXES_TBs;
-                }
-            });
-            resolve(result);
-        } catch (err) {
-            reject(err);
-        }
-    })
-};
 
 module.exports = router;

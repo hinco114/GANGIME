@@ -376,6 +376,49 @@ const addCode = (email, code) => {
     return Verification.create(conditions);
 };
 
+const uploadToS3 = (itemKey, readStream, mimetype) => {
+    return new Promise((resolve, reject) => {
+        try {
+            // For linux system, used full path of file. Path needs to slice
+            const slicedKey = itemKey.slice(itemKey.lastIndexOf('bin/') + 4, itemKey.length);
+            // S3 BucketName
+            const bucketName = s3Config.bucketName;
+            // Params setting
+            const params = {
+                Bucket: bucketName,
+                Key: slicedKey,
+                ACL: 'public-read',
+                Body: readStream,
+                ContentType: mimetype
+            };
+            // Get settings in config file
+            AWS.config.region = s3Config.region;
+            AWS.config.accessKeyId = s3Config.accessKeyId;
+            AWS.config.secretAccessKey = s3Config.secretAccessKey;
+            const s3 = new AWS.S3();
+            // Try to upload file
+            s3.putObject(params, (err, data) => {
+                if (err) {
+                    reject(err);
+                }
+                // If upload is successful, get a url and return
+                var imageUrl = s3.endpoint.href + bucketName + '/' + slicedKey;
+                resolve(imageUrl);
+            });
+        } catch (err) {
+            console.log('ERR OCCURED : ', err);
+        }
+    });
+};
+
+const getItemKey = (originName) => {
+    // Create new file name based on DATE
+    const extname = pathUtil.extname(originName);
+    const now = new Date();
+    const itemKey = 'file_' + now.getYear() + now.getMonth() + now.getDay() + now.getHours() + now.getMinutes() + now.getSeconds() + '_' + Math.floor(Math.random() * 1000) + extname;
+    return itemKey;
+};
+
 //////////////////////////////////////////////////////////////////////////////
 /* 1. 심부름 찜하기 */
 async function storeErrand(req, res, next) {
@@ -523,6 +566,7 @@ const getAllHistories = (userIdx, startIdx, category) => {
                 role = requester;
             }
 
+            // TODO : 페이지네이션 진행 후에 적용하기
             const result = await Errands.sequelize.query("SELECT errandIdx, errandTitle, startStationIdx, arrivalStationIdx, deadlineDt, itemPrice, errandPrice, errandStatus " +
                 "FROM ERRANDS_TB WHERE " + role + " ORDER BY CASE WHEN errandStatus='수행중' THEN 1 ELSE 2 END, createdAt DESC LIMIT 10 OFFSET " + startIdx).spread((result, metadata) => {
                 resolve(result);
@@ -550,52 +594,9 @@ async function loadFavoriteStations(req, res, next) {
     }
 }
 
-/* 6_1  DB에서 관심 지하철역들 불러오기 */
+/* 6_1  DB에서 관심 지하철역 불러오기 */
 const getFavoriteStations = (userIdx) => {
     return UserStation.findAll({where: {userIdx: userIdx}, attributes: ['stationIdx']});
-};
-
-const uploadToS3 = (itemKey, readStream, mimetype) => {
-    return new Promise((resolve, reject) => {
-        try {
-            // For linux system, used full path of file. Path needs to slice
-            const slicedKey = itemKey.slice(itemKey.lastIndexOf('bin/') + 4, itemKey.length);
-            // S3 BucketName
-            const bucketName = s3Config.bucketName;
-            // Params setting
-            const params = {
-                Bucket: bucketName,
-                Key: slicedKey,
-                ACL: 'public-read',
-                Body: readStream,
-                ContentType: mimetype
-            };
-            // Get settings in config file
-            AWS.config.region = s3Config.region;
-            AWS.config.accessKeyId = s3Config.accessKeyId;
-            AWS.config.secretAccessKey = s3Config.secretAccessKey;
-            const s3 = new AWS.S3();
-            // Try to upload file
-            s3.putObject(params, (err, data) => {
-                if (err) {
-                    reject(err);
-                }
-                // If upload is successful, get a url and return
-                var imageUrl = s3.endpoint.href + bucketName + '/' + slicedKey;
-                resolve(imageUrl);
-            });
-        } catch (err) {
-            console.log('ERR OCCURED : ', err);
-        }
-    });
-};
-
-const getItemKey = (originName) => {
-    // Create new file name based on DATE
-    const extname = pathUtil.extname(originName);
-    const now = new Date();
-    const itemKey = 'file_' + now.getYear() + now.getMonth() + now.getDay() + now.getHours() + now.getMinutes() + now.getSeconds() + '_' + Math.floor(Math.random() * 1000) + extname;
-    return itemKey;
 };
 
 module.exports = router;
