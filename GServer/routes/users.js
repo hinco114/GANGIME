@@ -474,16 +474,23 @@ const deleteErrand = (userIdx, errandIdx) => {
 /* 4. FCM 등록하기 */
 async function registerFcm(req, res, next) {
     try {
-        const userIdx = await tokenVerify(req.headers);
+        const token = await tokenVerify(req.headers);
+        const userIdx = token.userIdx;
         let fcmToken = req.body.fcmToken;
 
-        await addFcm(userIdx, fcmToken);
-        // TODO : (DH) update와 같이 반환되는 값이 없는 경우 단순하게 이렇게 해도 될지?
-        resSucc(res, null);
+        const result = await addFcm(userIdx, fcmToken);
+        if (result[0] === 1) {
+            res.send({msg: 'success'});
+        }
     } catch (err) {
         next(err);
     }
 }
+
+/* 4_1 FCM 토큰 정보 저장하기 */
+const addFcm = (userIdx, fcmToken) => {
+    return Users.update({fcmToken: fcmToken}, {where: {userIdx: userIdx}});
+};
 
 /* 5. 심부름 내역 보기 */
 async function showHistories(req, res, next) {
@@ -529,18 +536,6 @@ const getFavoriteStations = (userIdx) => {
     //         reject(err);
     //     }
     // });
-};
-
-/* 4_1 FCM 토큰 정보 저장하기 */
-const addFcm = (userIdx, fcmToken) => {
-    return new Promise((resolve, reject) => {
-        try {
-            const result = Users.update({fcmToken: fcmToken}, {where: {userIdx: userIdx}});
-            resolve(result);
-        } catch (err) {
-            reject(err);
-        }
-    })
 };
 
 /* 5_1 수행 또는 요청 심부름 내역 가져오기 */

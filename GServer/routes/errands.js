@@ -140,7 +140,7 @@ const editErrandContent = (body, errandIdx, userIdx) => {
             });
 
             if (statusChk.dataValues.errandStatus === '입금대기중') {
-                let result = Errands.update(
+                let result = await Errands.update(
                     body, {where: {requesterIdx: userIdx, errandIdx: errandIdx}});
                 resolve(result);
             } else {
