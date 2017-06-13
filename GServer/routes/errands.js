@@ -123,8 +123,9 @@ async function editErrand(req, res, next) {
         const token = await tokenVerify(req.headers);
         const userIdx = token.userIdx;
         const result = await editErrandContent(body, errandIdx, userIdx);
-        console.log(result);
-        resSucc(res, null);
+        if (result[0] === 1) {
+            res.send({msg: 'success'});
+        }
     } catch (err) {
         next(err);
     }
@@ -140,7 +141,7 @@ const editErrandContent = (body, errandIdx, userIdx) => {
 
             if (statusChk.dataValues.errandStatus === '입금대기중') {
                 let result = Errands.update(
-                    body, {where: {requesterIdx: userIdx, errandIdx: errandIdx}, returning: true});
+                    body, {where: {requesterIdx: userIdx, errandIdx: errandIdx}});
                 resolve(result);
             } else {
                 throw new Error('Cannot edit errand');

@@ -34,6 +34,7 @@ const getAllList = () => {
 /* 2. 가까운 역 찾기 */
 async function getNearStation(req, res, next) {
     try {
+        console.log(req.body.lat);
         if(!req.body.lat || !req.body.lon){
             throw new Error('Location not exist');
         }

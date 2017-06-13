@@ -17,17 +17,17 @@ async function showBankList(req, res, next) {
 
 /* 1_1 은행 목록 가져오기 */
 const getBankList = () => {
-    return new Promise((resolve, reject) => {
-        // TODO : (DH)  가능하면 바로 return 하기
-        try {
-            const result = Banks.findAll({
-                attributes: ['bankIdx', 'bankName', 'bankImageUrl']
-            });
-            resolve(result);
-        } catch (err) {
-            reject(err);
-        }
-    });
+    return Banks.findAll({attributes: ['bankIdx', 'bankName', 'bankImageUrl']});
+    // return new Promise((resolve, reject) => {
+    //     try {
+    //         const result = Banks.findAll({
+    //             attributes: ['bankIdx', 'bankName', 'bankImageUrl']
+    //         });
+    //         resolve(result);
+    //     } catch (err) {
+    //         reject(err);
+    //     }
+    // });
 };
 
 module.exports = router;
