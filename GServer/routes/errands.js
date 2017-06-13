@@ -19,7 +19,7 @@ router.route('/:errandIdx')
     .post(editErrand);
 router.route('/:errandIdx/cancel').post(requestCancelErrand);
 router.route('/:errandIdx/star').post(evaluateErrand);
-router.route('/:errandIdx/ask').post(askErrand);
+router.route('/:errandIdx/ask').post(askExecuteErrand);
 router.route('/:errandIdx/accept').post(acceptErrand);
 router.route('/:errandIdx/reject').post(rejectErrand);
 router.route('/:errandIdx/chats')
@@ -239,44 +239,50 @@ const addStars = (userIdx, errandIdx, point) => {
 };
 
 /* 6. 심부름 수행 요청 */
-async function askErrand(req, res, next) {
+async function askExecuteErrand(req, res, next) {
     try {
         const token = await tokenVerify(req.headers);
         const userIdx = token.userIdx;
         const errandIdx = req.params.errandIdx;
         const result = await askToRequester(userIdx, errandIdx);
-        if (result.dataValues.errandStatus === '신청진행중') {
-            Errands.update({errandStatus: '매칭대기중'}, {where: {errandIdx: errandIdx}, returning: true});
+        if (result[0] === 1) {
+            res.send({msg: 'success'});
         }
-        // resSucc(res, result);
-        res.send({msg: 'success'});
     } catch (err) {
         next(err);
     }
 }
 
-/* 6_1 스케줄러 사용해서 수행 요청 작업 */
+/* 6_1 해당 심부름에 신청 작업 진행 */
 const askToRequester = (userIdx, errandIdx) => {
     return new Promise(async (resolve, reject) => {
         try {
             const startTime = new Date(Date.now());
             const endTime = new Date(startTime.getTime() + 50000); // TODO: (DH) 시간 변경하기, 현재는 테스트 시간으로 설정함
+            const settings = {start: startTime, end: endTime};
+            await countFiveMinutes(settings, errandIdx);
 
             const askExecuting = await Errands.update(
-                {errandStatus: '신청진행중', executorIdx: userIdx}, {where: {errandIdx: errandIdx}, returning: true});
-
-            const countTimer = await schedule.scheduleJob({start: startTime, end: endTime}, () => {
-                const restResult = Errands.findOne({
-                    where: [{errandIdx: errandIdx}], attributes: ['errandStatus']
-                });
-                countTimer.cancel();
-                resolve(restResult);
-            });
+                {errandStatus: '신청진행중', executorIdx: userIdx}, {where: {errandIdx: errandIdx}}
+            );
+            resolve(askExecuting);
         } catch (err) {
             reject(err);
         }
     })
 };
+
+/* 6_2 스케줄러로 5분 뒤에 심부름 상태 체크하기 */
+const countFiveMinutes = (settings, errandIdx) => {
+    const countTimer = schedule.scheduleJob(settings, async () => {
+        const restResult = await Errands.findOne({where: [{errandIdx: errandIdx}], attributes: ['errandStatus']});
+        countTimer.cancel();
+        if (restResult.dataValues.errandStatus === '신청진행중') {
+            Errands.update({errandStatus: '매칭대기중'}, {where: {errandIdx: errandIdx}, returning: true});
+        }
+        // TODO : 5분 체크 후에 push해서는 심부름 요청에 대한 결과 보내주기
+    });
+}
 
 /* 7. 심부름 요청 승낙 */
 async function acceptErrand(req, res, next) {
