@@ -9,7 +9,7 @@ router.route('/closed/').post(getNearStation);
 /* 1. 지하철 목록 가져오기 */
 async function getStationList(req, res, next) {
     try {
-        let result = await getAllList();
+        const result = await getAllList();
         resSucc(res, result);
     } catch (err) {
         next(err);
@@ -19,6 +19,7 @@ async function getStationList(req, res, next) {
 /* 1_1 모든 지하철 정보 가져오기 */
 const getAllList = () => {
     return new Promise((resolve, reject) => {
+        // TODO : (DH) 가능하면 return으로만
         try {
             const stations = Stations.findAll({
                 attributes: ['stationIdx', 'stationName', 'stationLocation']
@@ -36,9 +37,9 @@ async function getNearStation(req, res, next) {
         if(!req.body.lat || !req.body.lon){
             throw new Error('Location not exist');
         }
-        let lat = req.body.lat;
-        let lon = req.body.lon;
-        let result = await findStation(lat, lon);
+        const lat = req.body.lat;
+        const lon = req.body.lon;
+        const result = await findStation(lat, lon);
         resSucc(res, result);
     } catch (err) {
         next(err);

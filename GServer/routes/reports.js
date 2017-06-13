@@ -2,21 +2,21 @@ const express = require('express');
 const router = express.Router();
 const resSucc = require('./gangime').resSucc;
 const tokenVerify = require('./gangime').tokenVerify;
-const r_models = require('../models/').REPORTS_TB;
+const Reports = require('../models/').REPORTS_TB;
 
 router.route('/').post(reportUser);
 
 /* 1. 신고하기 */
 async function reportUser(req, res, next) {
-    let errandIdx = req.body.errandIdx;
-    let reportContent = req.body.reportContent;
-    const decode = await tokenVerify(req.headers);
-    const userIdx = decode.userIdx;
+    const errandIdx = req.body.errandIdx;
+    const reportContent = req.body.reportContent;
+    const token = await tokenVerify(req.headers);
+    const userIdx = token.userIdx;
     if (!errandIdx || !reportContent) {
         throw new Error("내용 누락");
     }
     try {
-        let result = await createReport(userIdx, errandIdx, reportContent);
+        const result = await createReport(userIdx, errandIdx, reportContent);
         resSucc(res, result);
     } catch (err) {
         next(err);
@@ -26,12 +26,12 @@ async function reportUser(req, res, next) {
 /* 1_1 DB에 신고 등록하기 */
 const createReport = (userIdx, errandIdx, reportContent) => {
     return new Promise((resolve, reject) => {
-        const result = r_models.create({userIdx: userIdx, errandIdx: errandIdx, reportContent: reportContent});
-        if (result) {
+        // TODO : (DH) 가능하면 바로 return 하기
+        try {
+            const result = Reports.create({userIdx: userIdx, errandIdx: errandIdx, reportContent: reportContent});
             resolve(result);
-        }
-        else {
-            reject('error');
+        } catch (err) {
+            reject(err);
         }
     });
 };

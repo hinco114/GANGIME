@@ -35,10 +35,10 @@ async function registerErrand(req, res, next) {
         if (!req.body) {
             throw new Error('Contents not exist');
         }
-        let body = req.body;
-        let token = await tokenVerify(req.headers);
-        let userIdx = token.userIdx;
-        let result = await createErrand(body, userIdx);
+        const body = req.body;
+        const token = await tokenVerify(req.headers);
+        const userIdx = token.userIdx;
+        const result = await createErrand(body, userIdx);
         resSucc(res, result);
     } catch (err) {
         next(err);
@@ -49,20 +49,21 @@ async function registerErrand(req, res, next) {
 const createErrand = (body, userIdx) => {
     return new Promise(async (resolve, reject) => {
         try {
-            let s_location = await Stations.findById(body.startStationIdx, {attributes: ['stationLocation']}); // TODO : (DH) degree => meter로 변환
-            let a_location = await Stations.findById(body.arrivalStationIdx, {attributes: ['stationLocation']});
-            let s_lat = s_location.dataValues.stationLocation.coordinates[0];
-            let s_lon = s_location.dataValues.stationLocation.coordinates[1];
-            let a_lat = a_location.dataValues.stationLocation.coordinates[0];
-            let a_lon = a_location.dataValues.stationLocation.coordinates[1];
-            let distances = await getDistance(s_lat, s_lon, a_lat, a_lon);
+            const s_location = await Stations.findById(body.startStationIdx, {attributes: ['stationLocation']});
+            const a_location = await Stations.findById(body.arrivalStationIdx, {attributes: ['stationLocation']});
+            const s_lat = s_location.dataValues.stationLocation.coordinates[0];
+            const s_lon = s_location.dataValues.stationLocation.coordinates[1];
+            const a_lat = a_location.dataValues.stationLocation.coordinates[0];
+            const a_lon = a_location.dataValues.stationLocation.coordinates[1];
+            // TODO : (DH) degree => meter로 변환
+            const distances = await getDistance(s_lat, s_lon, a_lat, a_lon);
 
             let inputData = body;
             inputData.requesterIdx = userIdx;
             inputData.errandStatus = '입금대기중';
             inputData.stationDistance = distances.dataValues.stationDistance;
 
-            let result = await Errands.create(inputData);
+            const result = await Errands.create(inputData);
             resolve(result);
         } catch (err) {
             reject(err);
@@ -84,8 +85,8 @@ async function showErrandDetail(req, res, next) {
         if (!req.params.errandIdx) {
             throw new Error('errandIdx not exist');
         }
-        let errandIdx = req.params.errandIdx;
-        let result = await getErrandDetail(errandIdx);
+        const errandIdx = req.params.errandIdx;
+        const result = await getErrandDetail(errandIdx);
         resSucc(res, result);
     } catch (err) {
         next(err);
@@ -100,7 +101,7 @@ const getErrandDetail = (errandIdx) => {
                 'startStationIdx', 'arrivalStationIdx', 'deadlineDt', 'itemPrice',
                 'errandPrice', 'errandStatus'];
 
-            let statusChk = await Errands.findOne({
+            const statusChk = await Errands.findOne({
                 where: {errandIdx: errandIdx}, attributes: ['errandStatus']
             });
 
@@ -134,9 +135,9 @@ async function editErrand(req, res, next) {
         if (!req.params.errandIdx) {
             throw new Error('errandIdx not exist');
         }
-        let body = req.body;
-        let errandIdx = req.params.errandIdx;
-        let token = await tokenVerify(req.headers);
+        const body = req.body;
+        const errandIdx = req.params.errandIdx;
+        const token = await tokenVerify(req.headers);
         const userIdx = token.userIdx;
         await editErrandContent(body, errandIdx, userIdx);
         resSucc(res, null);
@@ -150,7 +151,7 @@ const editErrandContent = (body, errandIdx, userIdx) => {
     return new Promise(async (resolve, reject) => {
         let result = null;
         try {
-            let statusChk = await Errands.findOne({
+            const statusChk = await Errands.findOne({
                 where: {errandIdx: errandIdx}, attributes: ['errandStatus']
             });
 
@@ -176,11 +177,11 @@ async function requestCancelErrand(req, res, next) {
         if (!req.body.cancelReason) {
             throw new Error('cancelReason not exist');
         }
-        let token = await tokenVerify(req.headers);
-        let userIdx = token.userIdx;
-        let errandIdx = req.params.errandIdx;
-        let reason = req.body.cancelReason;
-        let result = await registerCancelContent(userIdx, errandIdx, reason);
+        const token = await tokenVerify(req.headers);
+        const userIdx = token.userIdx;
+        const errandIdx = req.params.errandIdx;
+        const reason = req.body.cancelReason;
+        const result = await registerCancelContent(userIdx, errandIdx, reason);
         resSucc(res, result);
     } catch (err) {
         next(err);
@@ -191,17 +192,17 @@ async function requestCancelErrand(req, res, next) {
 const registerCancelContent = (userIdx, errandIdx, reason) => {
     return new Promise(async (resolve, reject) => {
         try {
-            let findTarget = await Errands.findOne({
+            const findTarget = await Errands.findOne({
                 where: {errandIdx: errandIdx},
                 attributes: ['requesterIdx', 'executorIdx']
             });
-            let requesterIdx = findTarget.dataValues.requesterIdx;
-            let executorIdx = findTarget.dataValues.executorIdx;
-            let targetUserIdx = (requesterIdx === userIdx) ? executorIdx : requesterIdx;
+            const requesterIdx = findTarget.dataValues.requesterIdx;
+            const executorIdx = findTarget.dataValues.executorIdx;
+            const targetUserIdx = (requesterIdx === userIdx) ? executorIdx : requesterIdx;
 
             await Cancel.create({errandIdx: errandIdx, targetUserIdx: targetUserIdx, cancelReason: reason});
             // TODO : (DH) 상대방 있는 경우에 적용하기
-            let changeStatus = await Errands.update(
+            const changeStatus = await Errands.update(
                 {errandStatus: "취소요청"}, {where: {errandIdx: errandIdx}}, {returning: true}
             );
             resolve(changeStatus);
@@ -225,49 +226,27 @@ async function evaluateErrand(req, res, next) {
     }
 }
 
-/* 6. 채팅내용 가져오기 */
-async function getChats(req, res, next) {
-    try {
-        const decode = await tokenVerify(req.headers);
-        const userIdx = decode.userIdx;
-        const userNickname = decode.userNickname;
-        let errandIdx = req.params.errandIdx;
-        const errand = await Errands.findById(errandIdx);
-        if (!errand) {
-            throw new Error('Errand not found');
+/* 5_1 평가 테이블에 점수 입력하기 */
+const addStars = (userIdx, errandIdx, point) => {
+    return new Promise((resolve, reject) => {
+        try {
+            const result = Stars.create({userIdx: userIdx, errandIdx: errandIdx, point: point});
+            resolve(result);
+        } catch (err) {
+            reject(err);
         }
-        if (!errand.errandChatId) {
-            throw new Error('Chat room not Exist');
-        }
-        let errandChat = await errandChats.findById(errand.errandChatId);
-        if (!errandChat || errandChat.chats.length == 0) {
-            resSucc(res, null);
-            return;
-        }
-        let opponent = errandChat.requesterIdx == userIdx ? errandChat.executorIdx : errandChat.requesterIdx;
-        let index = req.query.index > 1 ? req.query.index - 1 : 0;
-        let data = {};
-        data.start = index + 1;
-        data.end = index + errandChat.chats.length;
-        let user = await Users.findById(opponent);
-        data.myNickname = userNickname;
-        data.opponentNickname = user.userNickname;
-        data.chats = errandChat.chats.slice(index, index + 50);
-        resSucc(res, data);
-    } catch (err) {
-        next(err);
-    }
-}
+    })
+};
 
 /* 6. 심부름 수행 요청 */
 async function askErrand(req, res, next) {
     try {
-        let token = await tokenVerify(req.headers);
-        let errandIdx = req.params.errandIdx;
-        let result = await askToRequester(token, errandIdx);
+        const token = await tokenVerify(req.headers);
+        const userIdx = token.userIdx;
+        const errandIdx = req.params.errandIdx;
+        const result = await askToRequester(userIdx, errandIdx);
         if (result.dataValues.errandStatus === '신청진행중') {
-            Errands.update(
-                {errandStatus: '매칭대기중'}, {where: {errandIdx: errandIdx}, returning: true});
+            Errands.update({errandStatus: '매칭대기중'}, {where: {errandIdx: errandIdx}, returning: true});
         }
         // resSucc(res, result);
         res.send({msg: 'success'});
@@ -275,6 +254,29 @@ async function askErrand(req, res, next) {
         next(err);
     }
 }
+
+/* 6_1 스케줄러 사용해서 수행 요청 작업 */
+const askToRequester = (userIdx, errandIdx) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const startTime = new Date(Date.now());
+            const endTime = new Date(startTime.getTime() + 50000); // TODO: (DH) 시간 변경하기, 현재는 테스트 시간으로 설정함
+
+            const askExecuting = await Errands.update(
+                {errandStatus: '신청진행중', executorIdx: userIdx}, {where: {errandIdx: errandIdx}, returning: true});
+
+            const countTimer = await schedule.scheduleJob({start: startTime, end: endTime}, () => {
+                const restResult = Errands.findOne({
+                    where: [{errandIdx: errandIdx}], attributes: ['errandStatus']
+                });
+                countTimer.cancel();
+                resolve(restResult);
+            });
+        } catch (err) {
+            reject(err);
+        }
+    })
+};
 
 /* 7. 심부름 요청 승낙 */
 async function acceptErrand(req, res, next) {
@@ -300,8 +302,9 @@ async function acceptErrand(req, res, next) {
 async function rejectErrand(req, res, next) {
     try {
         let token = await tokenVerify(req.headers);
+        const userIdx = token.userIdx;
         let errandIdx = req.params.errandIdx;
-        let result = await cancelAdd(token, errandIdx);
+        let result = await cancelAdd(userIdx, errandIdx);
         resSucc(res, result);
     } catch (err) {
         next(err);
@@ -367,6 +370,40 @@ const applyRefund = (errandIdx) => {
     return Errands.update({errandStatus: '취소완료'}, {where: {errandIdx: errandIdx}, returning: true});
 };
 
+/* 12. 채팅내용 가져오기 */
+async function getChats(req, res, next) {
+    try {
+        const decode = await tokenVerify(req.headers);
+        const userIdx = decode.userIdx;
+        const userNickname = decode.userNickname;
+        let errandIdx = req.params.errandIdx;
+        const errand = await Errands.findById(errandIdx);
+        if (!errand) {
+            throw new Error('Errand not found');
+        }
+        if (!errand.errandChatId) {
+            throw new Error('Chat room not Exist');
+        }
+        let errandChat = await errandChats.findById(errand.errandChatId);
+        if (!errandChat || errandChat.chats.length == 0) {
+            resSucc(res, null);
+            return;
+        }
+        let opponent = errandChat.requesterIdx == userIdx ? errandChat.executorIdx : errandChat.requesterIdx;
+        let index = req.query.index > 1 ? req.query.index - 1 : 0;
+        let data = {};
+        data.start = index + 1;
+        data.end = index + errandChat.chats.length;
+        let user = await Users.findById(opponent);
+        data.myNickname = userNickname;
+        data.opponentNickname = user.userNickname;
+        data.chats = errandChat.chats.slice(index, index + 50);
+        resSucc(res, data);
+    } catch (err) {
+        next(err);
+    }
+}
+
 async function addChats(req, res, next) {
     try {
         const decode = await tokenVerify(req.headers);
@@ -389,53 +426,13 @@ async function addChats(req, res, next) {
     }
 }
 
-/* 5_1 평가 테이블에 점수 입력하기 */
-const addStars = (userIdx, errandIdx, point) => {
-    return new Promise((resolve, reject) => {
-        let result = Stars.create({
-            userIdx: userIdx, errandIdx: errandIdx, point: point
-        });
-        if (result) {
-            resolve(result);
-        }
-        else {
-            reject('error');
-        }
-    })
-};
-
-/* 6_1 스케줄러 사용해서 수행 요청 작업 */
-const askToRequester = (token, errandIdx) => {
-    return new Promise(async (resolve, reject) => {
-        try {
-            let userIdx = token.userIdx;
-            let startTime = new Date(Date.now());
-            let endTime = new Date(startTime.getTime() + 50000); // TODO: (DH) 시간 변경하기, 현재는 테스트 시간으로 설정함
-
-            const askExecuting = await Errands.update(
-                {errandStatus: '신청진행중', executorIdx: userIdx}, {where: {errandIdx: errandIdx}, returning: true});
-
-            const countTimer = await schedule.scheduleJob({start: startTime, end: endTime}, () => {
-                const restResult = Errands.findOne({
-                    where: [{errandIdx: errandIdx}], attributes: ['errandStatus']
-                });
-                countTimer.cancel();
-                resolve(restResult);
-            });
-        } catch (err) {
-            reject(err);
-        }
-    })
-};
-
 /* 8_1 요청이 들어온 심부름 거절하기 */
-const cancelAdd = (token, errandIdx) => {
+const cancelAdd = (userIdx, errandIdx) => {
     return new Promise(async (resolve, reject) => {
+        // TODO : (DH) userIdx 왜 받아오는지
         try {
-            let userIdx = token.userIdx;
             let cancelExecutor = await Errands.update(
-                {executorIdx: null},
-                {where: {errandIdx: errandIdx, errandStatus: '신청진행중'}, returning: true});
+                {executorIdx: null}, {where: {errandIdx: errandIdx, errandStatus: '신청진행중'}, returning: true});
             resolve(cancelExecutor);
         } catch (err) {
             reject(err);
@@ -463,14 +460,14 @@ const getErrandList = (decode, startIdx, startStation, arrivalStation, order) =>
             const doingResult = await Errands.findAll({
                 include: [{model: Boxes, attributes: ['boxIdx']}],
                 where: [{errandStatus: '진행중'}, {$or: [{requesterIdx: user}, {executorIdx: user}]}],
-                attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx',
+                attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx', 'deadlineDt',
                     'itemPrice', 'errandPrice', 'errandStatus']
             });
             let condition = {
 
                 include: [{model: Boxes, attributes: ['boxIdx']}],
                 where: [stations, {errandStatus: '매칭대기중'}],
-                attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx',
+                attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx', 'deadlineDt',
                     'itemPrice', 'errandPrice', 'errandStatus'],
                 order: [[selectOrder, 'DESC']]
             };
