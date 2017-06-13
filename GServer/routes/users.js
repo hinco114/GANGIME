@@ -450,10 +450,14 @@ async function showHistories(req, res, next) {
 /* 6. 관심 지하철역 불러오기 */
 async function loadFavoriteStations(req, res, next) {
     try {
-        let token = await tokenVerify(req.headers);
-        let userIdx = token.userIdx;
-        let result = await getFavoriteStations(userIdx);
-        resSucc(res, result);
+        const token = await tokenVerify(req.headers);
+        const userIdx = token.userIdx;
+        const result = await getFavoriteStations(userIdx);
+        let stationArr = [];
+        await result.forEach(result => {
+            stationArr.push(result.dataValues.stationIdx);
+        });
+        res.send({msg: 'success', stationIdx: stationArr});
     } catch (err) {
         next(err);
     }
@@ -461,16 +465,17 @@ async function loadFavoriteStations(req, res, next) {
 
 /* 6_1  DB에서 관심 지하철역들 불러오기 */
 const getFavoriteStations = (userIdx) => {
-    return new Promise((resolve, reject) => {
-        try{
-            let stations = UserStation.findAll({
-                where: {userIdx: userIdx}, attributes: ['stationIdx']
-            });
-            resolve(stations);
-        } catch(err){
-            reject(err);
-        }
-    });
+    return UserStation.findAll({where: {userIdx: userIdx}, attributes: ['stationIdx']});
+    // return new Promise((resolve, reject) => {
+    //     try{
+    //         const stations = UserStation.findAll({
+    //             where: {userIdx: userIdx}, attributes: ['stationIdx']
+    //         });
+    //         resolve(stations);
+    //     } catch(err){
+    //         reject(err);
+    //     }
+    // });
 };
 
 /* 1_1 선택한 심부름 찜하기 */
