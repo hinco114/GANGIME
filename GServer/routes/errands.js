@@ -255,9 +255,10 @@ async function askExecuteErrand(req, res, next) {
 const askToRequester = (userIdx, errandIdx) => {
     return new Promise(async (resolve, reject) => {
         try {
-            // TODO : (DH)  시간제대로 되는지 체크해보기
             const startTime = new Date(Date.now());
-            const endTime = new Date(startTime.getTime() + 50000); // TODO: (DH) 시간 변경하기, 현재는 테스트 시간으로 설정함
+            const endTime = new Date(startTime.getTime() + 10000); // TODO: (DH) 시간 변경하기, 현재는 테스트 시간으로 설정함
+            console.log("시작 : " + startTime);
+            console.log("끝 : " + endTime);
             const settings = {start: startTime, end: endTime};
             await countFiveMinutes(settings, errandIdx);
 
@@ -315,7 +316,6 @@ async function rejectErrandRequest(req, res, next) {
         const token = await tokenVerify(req.headers);
         const userIdx = token.userIdx;
         const errandIdx = req.params.errandIdx;
-        // TODO : (DH) 제대로 실행되나 체크하기
         // const chkStatus = await Errands.findById(errandIdx, {attributes: ['errandStatus']});
         const chkStatus = await checkErrandStatus(errandIdx);
         if (chkStatus.dataValues.errandStatus === '매칭대기중') {
@@ -394,7 +394,7 @@ const getErrandList = (decode, startIdx, startStation, arrivalStation, order) =>
             if (!startStation) {
                 delete userDoing.where[0];
             }
-            if (!user) { // TODO : (DH) 진행중이 없는 경우에는 어떻게 나오는지 체크해보기
+            if (!user) {
                 delete userDoing.where[2];
             }
             const doingResult = await Errands.findAll(userDoing);

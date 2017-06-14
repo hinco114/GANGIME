@@ -1,19 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const path = require('path');
 const resSucc = require('./gangime').resSucc;
 const Notices = require('../models/').NOTICES_TB;
 
-router.route('/new').get(showAdminPage);
 router.route('/')
     .post(postNotice)
     .get(showNoticeList);
 router.route('/:noticeIdx').get(showNoticeDetail);
-
-// TODO : (DH) 관리자페이지 옮겨두기
-function showAdminPage(req, res) {
-    res.sendFile(path.resolve('../public/admin_notice.html'));
-}
 
 /* 1. 공지사항 게시 */
 async function postNotice(req, res, next) {

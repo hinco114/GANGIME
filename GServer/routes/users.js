@@ -470,7 +470,6 @@ async function getBoxList(req, res, next) {
 const findBoxeErrands = (startIdx, endIdx, userIdx) => {
     return new Promise(async (resolve, reject) => {
         try {
-            // TODO : (DH) 분리했는데 쿼리 제대로 실행되는지 체크하기
             // TODO : (DH) 가능하면 raw query 사용하지 않기
             await  Errands.sequelize.query("DELETE B FROM BOXES_TB AS B JOIN ERRANDS_TB AS E ON B.errandIdx=E.errandIdx " +
                 "WHERE E.errandStatus!='매칭대기중';");

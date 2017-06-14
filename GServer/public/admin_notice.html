@@ -30,13 +30,12 @@
     function sendPostDeposit() {
         var depositIdx = document.getElementById('depositIdx').value;
         var url = '/errands/' + depositIdx + '/deposit';
-
         $.ajax({
             url: url,
             type: 'post',
-            // TODO : (DH) data 없이도 잘 실행되는지? 그리고 response message
             success: function (data) {
-                console.log('Post Success');
+                alert(data.msg);
+                document.getElementById('depositIdx').value = null;
             }
         });
     }
@@ -44,12 +43,12 @@
     function sendPostRefund() {
         var refundIdx = document.getElementById('refundIdx').value;
         var url = '/errands/' + refundIdx + '/refund';
-
         $.ajax({
             url: url,
             type: 'post',
             success: function () {
-                console.log('Post Success');
+                alert(data.msg);
+                document.getElementById('depositIdx').value = null;
             }
         });
     }
