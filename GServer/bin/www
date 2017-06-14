@@ -31,7 +31,7 @@ function initBank() {
                     csv()
                         .fromFile(csvFilePath)
                         .on('end_parsed', (users) => {
-                            models.BANKS_TB.bulkCreate(users,{logging: false})
+                            models.BANKS_TB.bulkCreate(users, {logging: false})
                                 .catch(err => {
                                     console.log('This is err : ', err);
                                     reject(err);
@@ -55,7 +55,7 @@ function initUser() {
                     csv()
                         .fromFile(csvFilePath)
                         .on('end_parsed', (users) => {
-                            models.USERS_TB.bulkCreate(users,{logging: false})
+                            models.USERS_TB.bulkCreate(users, {logging: false})
                                 .catch(err => {
                                     console.log('USER ERROR : ', err);
                                     reject(err)
@@ -80,19 +80,29 @@ function initStation() {
                     csv()
                         .fromFile(csvFilePath)
                         .on('json', parsed => {
-                            if (!data.find(station => {
-                                    return station.stationName === parsed.이름
-                                })) {
+                            // check duplication
+                            let index = data.findIndex(station => {
+                                return station.stationName === parsed.이름
+                            });
+                            if (index >= 0) {
+                                data[index].stationLines.push(getStationName(parsed.호선));
+                                data[index].stationLines.sort();
+                            } else {
+                                // Not duplicate, have location values case
                                 if (parsed.이름 && parsed.X && parsed.Y) {
                                     let newStation = {};
                                     newStation.stationName = parsed.이름;
+                                    newStation.stationLines = [getStationName(parsed.호선)];
                                     newStation.stationLocation = {type: 'Point', coordinates: [parsed.X, parsed.Y]};
                                     data.push(newStation);
                                 }
                             }
                         })
                         .on('end_parsed', () => {
-                            models.STATIONS_TB.bulkCreate(data,{logging: false})
+                            data.forEach(station => {
+                                station.stationLines = station.stationLines.toString();
+                            });
+                            models.STATIONS_TB.bulkCreate(data, {logging: false})
                                 .then(() => {
                                     console.log('Station Data init Complete');
                                     resolve();
@@ -147,6 +157,35 @@ function initErrand() {
             });
         resolve();
     })
+}
+
+function getStationName(name) {
+    switch (name) {
+        case 'A' :
+            return '공항';
+        case 'B' :
+            return '분당';
+        case 'E' :
+            return '에버';
+        case 'G' :
+            return '경춘';
+        case 'I' :
+            return '인천1';
+        case 'I2' :
+            return '인천2';
+        case 'K' :
+            return '경의중앙';
+        case 'KK' :
+            return '경강';
+        case 'S' :
+            return '신분당선';
+        case 'SU' :
+            return '수인';
+        case 'U' :
+            return '의정';
+        default :
+            return name;
+    }
 }
 
 // sync with Initializing Dummy Datas
