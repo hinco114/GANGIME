@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const schedule = require('node-schedule');
 const resSucc = require('./gangime').resSucc;
+const resPageSucc = require('./gangime').resPageSucc;
 const tokenVerify = require('./gangime').tokenVerify;
 const Errands = require('../models/').ERRANDS_TB;
 const Cancel = require('../models/').CANCEL_TB;
@@ -340,7 +341,8 @@ async function getStationsErrands(req, res, next) {
         const order = req.query.order || 'time';
 
         const result = await getErrandList(decode, startIdx, startStation, arrivalStation, order);
-        resSucc(res, result);
+        resPageSucc(res, result);
+        //resSucc(res, result);
     } catch (err) {
         next(err);
     }
@@ -392,7 +394,6 @@ const getErrandList = (decode, startIdx, startStation, arrivalStation, order) =>
             }
             const restResult = await Errands.findAll(byStations);
 
-            // TODO : (DH) 페이지네이션 제대로 설정하기 => slice 사용(6번. 채팅 참고하기)
             let result = await doingResult.concat(restResult);
             await result.forEach(result => {
                 if (typeof result.dataValues.BOXES_TBs[0] === 'undefined') {
@@ -403,6 +404,9 @@ const getErrandList = (decode, startIdx, startStation, arrivalStation, order) =>
                     delete result.dataValues.BOXES_TBs;
                 }
             });
+            result = result.slice(startIdx, startIdx + 15);
+            result.start = startIdx;
+            result.end = startIdx + 15;
             resolve(result);
         } catch (err) {
             reject(err);

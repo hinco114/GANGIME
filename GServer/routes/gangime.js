@@ -6,6 +6,7 @@ const resSucc = (res, data) => {
     let resultModel = {
         msg: 'success'
     };
+
     if (data && data.chats) {
         resultModel.total = data.chats.length;
         resultModel.index = {
@@ -14,18 +15,34 @@ const resSucc = (res, data) => {
         };
         delete data.start;
         delete data.end;
-    } else if (Array.isArray(data)) {
-        resultModel.total = data.length;
-        let idxName, start, end;
-        if (data.length > 0) {
-            idxName = Object.keys(data[0].dataValues)[0];
-            start = data[0][idxName];
-            end = data[data.length - 1][idxName];
-        }
-        resultModel.index = {
-            start: start || 0,
-            end: end || 0
-        }
+    }
+    // else if (Array.isArray(data)) {
+    //     resultModel.total = data.length;
+    //     let idxName, start, end;
+    //     if (data.length > 0) {
+    //         idxName = Object.keys(data[0].dataValues)[0];
+    //         start = data[0][idxName];
+    //         end = data[data.length - 1][idxName];
+    //     }
+    //     resultModel.index = {
+    //         start: start || 0,
+    //         end: end || 0
+    //     }
+    // }
+    resultModel.data = data ? data : null;
+    res.status(200);
+    res.json(resultModel);
+};
+
+const resPageSucc = (res, data) => {
+    let resultModel = {
+        msg: 'success'
+    };
+    resultModel.total = data.length;
+    let compareNum = (data.end > data.length)? data.length : data.end;
+    resultModel.index = {
+        start: data.start || 0,
+        end: compareNum || 0
     }
     resultModel.data = data ? data : null;
     res.status(200);
@@ -63,5 +80,6 @@ async function createToken(userIdx, userNickname) {
 }
 
 module.exports.resSucc = resSucc;
+module.exports.resPageSucc = resPageSucc;
 module.exports.tokenVerify = tokenVerify;
 module.exports.createToken = createToken;

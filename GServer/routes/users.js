@@ -16,6 +16,7 @@ const UserStation = require('../models').USER_STATIONS_TB;
 const emailConfig = require('../config/config.json')['nodemailer'];
 const s3Config = require('../config/config.json')['S3'];
 const resSucc = require('./gangime').resSucc;
+const resPageSucc = require('./gangime').resPageSucc;
 const createToken = require('./gangime').createToken;
 const tokenVerify = require('./gangime').tokenVerify;
 
@@ -458,13 +459,12 @@ const putIntoBox = (userIdx, errandIdx) => {
 /* 2. 심부름 찜한 목록 보기 */
 async function getBoxList(req, res, next) {
     try {
-        // TODO : (DH) 페이지네이션
-        const startIdx = req.query.index || 1;
+        const startIdx = req.query.index - 1 || 0;
         const endIdx = startIdx + 2;
         const token = await tokenVerify(req.headers);
         const userIdx = token.userIdx;
         let result = await findBoxeErrands(startIdx, endIdx, userIdx);
-        resSucc(res, result);
+        resPageSucc(res, result);
     } catch (err) {
         next(err);
     }
@@ -476,8 +476,8 @@ const findBoxeErrands = (startIdx, endIdx, userIdx) => {
         try {
             await  Errands.sequelize.query("DELETE B FROM BOXES_TB AS B JOIN ERRANDS_TB AS E ON B.errandIdx=E.errandIdx WHERE E.errandStatus!='매칭대기중';");
             const result = await Boxes.findAll({
-                // offset: startIdx - 1,
-                // limit: 5, // TODO : (DH) 페이지네이션에 알맞게 변경하기
+                offset: startIdx,
+                limit: 15,
                 where: {userIdx: userIdx},
                 attributes: ['errandIdx'],
                 include: [{
@@ -485,6 +485,8 @@ const findBoxeErrands = (startIdx, endIdx, userIdx) => {
                         'startStationIdx', 'arrivalStationIdx', 'errandPrice', 'itemPrice']
                 }]
             });
+            result.start = startIdx;
+            result.end = startIdx + 15;
             resolve(result);
         } catch (err) {
             reject(err);
@@ -542,10 +544,11 @@ async function showHistories(req, res, next) {
         }
         const token = await tokenVerify(req.headers);
         const userIdx = token.userIdx;
-        const startIdx = 0;
+        const startIdx = req.query.index - 1 || 0;
         const category = req.query.category;
         let result = await getAllHistories(userIdx, startIdx, category);
-        res.send({msg: 'success', data: result});
+        resPageSucc(res, result);
+        // res.send({msg: 'success', data: result});
     } catch (err) {
         next(err);
     }
@@ -569,7 +572,9 @@ const getAllHistories = (userIdx, startIdx, category) => {
             const result = await Errands.sequelize.query("SELECT errandIdx, errandTitle, startStationIdx, arrivalStationIdx," +
                 "date_format(deadlineDt, '%m.%d') AS `deadlineDt`, itemPrice, errandPrice, errandStatus " +
                 "FROM ERRANDS_TB WHERE " + role + " ORDER BY CASE WHEN errandStatus='수행중' THEN 1 ELSE 2 END," +
-                "createdAt DESC LIMIT 10 OFFSET " + startIdx).spread((result, metadata) => {
+                "createdAt DESC LIMIT 20 OFFSET " + startIdx).spread((result, metadata) => {
+                result.start = startIdx;
+                result.end = startIdx + 20;
                 resolve(result);
             });
         } catch (err) {

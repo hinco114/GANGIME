@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const resSucc = require('./gangime').resSucc;
+const resPageSucc = require('./gangime').resPageSucc;
 const Notices = require('../models/').NOTICES_TB;
 
 router.route('/new').get(showAdminPage);
@@ -32,19 +33,21 @@ async function postNotice(req, res, next) {
 /* 2. 공지사항 글목록 보기 */
 async function showNoticeList(req, res, next) {
     try {
-        const startIdx = req.query.index || 1;
-        const endIdx = startIdx + 5;
-        const result = await getAllNoticesList(startIdx, endIdx);
-        resSucc(res, result);
+        const startIdx = req.query.index - 1 || 0;
+        const result = await getAllNoticesList(startIdx);
+        result.start = startIdx;
+        result.end = startIdx + 10;
+        resPageSucc(res, result);
     } catch (err) {
         next(err);
     }
 }
 
 /* 2_2 공지사항 목록 가져오기 */
-const getAllNoticesList = (startIdx, endIdx) => {
+const getAllNoticesList = (startIdx) => {
     return Notices.findAll({
-        where: {noticeIdx: {between: [startIdx, endIdx]}},
+        offset: startIdx,
+        limit: 10,
         attributes: ['noticeIdx', 'noticeTitle', 'createdAt']
     });
 };
