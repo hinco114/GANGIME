@@ -477,8 +477,8 @@ const findBoxeErrands = (startIdx, endIdx, userIdx) => {
         try {
             await  Errands.sequelize.query("DELETE B FROM BOXES_TB AS B JOIN ERRANDS_TB AS E ON B.errandIdx=E.errandIdx WHERE E.errandStatus!='매칭대기중';");
             const result = await Boxes.findAll({
-                offset: startIdx - 1,
-                limit: 5, // TODO : (DH) 페이지네이션에 알맞게 변경하기
+                // offset: startIdx - 1,
+                // limit: 5, // TODO : (DH) 페이지네이션에 알맞게 변경하기
                 where: {userIdx: userIdx},
                 attributes: ['errandIdx'],
                 include: [{
