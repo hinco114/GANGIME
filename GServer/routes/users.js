@@ -471,18 +471,29 @@ const findBoxeErrands = (startIdx, endIdx, userIdx) => {
     return new Promise(async (resolve, reject) => {
         try {
             // TODO : (DH) 가능하면 raw query 사용하지 않기
-            await  Errands.sequelize.query("DELETE B FROM BOXES_TB AS B JOIN ERRANDS_TB AS E ON B.errandIdx=E.errandIdx " +
+            await Errands.sequelize.query("DELETE B FROM BOXES_TB AS B JOIN ERRANDS_TB AS E ON B.errandIdx=E.errandIdx " +
                 "WHERE E.errandStatus!='매칭대기중';");
             const result = await Boxes.findAll({
                 offset: startIdx,
                 limit: 15,
                 where: {userIdx: userIdx},
                 attributes: ['errandIdx'],
+                order: [['createdAt', 'DESC']],
                 include: [{
-                    model: Errands, attributes: ['errandIdx', 'errandTitle',
+                    model: Errands, attributes: ['errandTitle',
                         'startStationIdx', 'arrivalStationIdx', 'errandPrice', 'itemPrice']
                 }]
             });
+
+            await result.forEach(result => {
+                result.dataValues.errandTitle = result.dataValues.ERRANDS_TB.dataValues.errandTitle;
+                result.dataValues.startStationIdx = result.dataValues.ERRANDS_TB.dataValues.startStationIdx;
+                result.dataValues.arrivalStationIdx = result.dataValues.ERRANDS_TB.dataValues.arrivalStationIdx;
+                result.dataValues.errandPrice = result.dataValues.ERRANDS_TB.dataValues.errandPrice;
+                result.dataValues.itemPrice = result.dataValues.ERRANDS_TB.dataValues.itemPrice;
+                delete result.dataValues.ERRANDS_TB;
+            });
+
             result.start = startIdx;
             result.end = startIdx + 15;
             resolve(result);
