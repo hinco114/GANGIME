@@ -424,7 +424,7 @@ const getItemKey = (originName) => {
 async function storeErrand(req, res, next) {
     try {
         if (!req.body.errandIdx) {
-            throw new Error('errandidx not exist')
+            throw new Error('errandIdx not exist')
         }
         const decode = await tokenVerify(req.headers);
         const userIdx = decode.userIdx;
@@ -443,7 +443,6 @@ const putIntoBox = (userIdx, errandIdx) => {
             const chkExist = await Boxes.findOne({
                 where: {userIdx: userIdx, errandIdx: errandIdx}
             });
-            console.log(chkExist);
             if (chkExist === null) {
                 const result = Boxes.create({userIdx: userIdx, errandIdx: errandIdx});
                 resolve(result);
