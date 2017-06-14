@@ -53,27 +53,29 @@ app.use((err, req, res, next) => {
     res.status(err.status || 500);
     res.json({msg: err.message, data: null});
     const slackConfig = require('./config/config.json')['slack'];
-    Request
-        .post(slackConfig.url)
-        .form({
-            payload: JSON.stringify({
+    if (slackConfig) {
+        Request
+            .post(slackConfig.url)
+            .form({
+                payload: JSON.stringify({
 
-                'channel': slackConfig.channel,
-                'username': slackConfig.username,
-                'icon_emoji': slackConfig.icon_emoji,
-                'attachments': [
-                    {
-                        'color': 'danger',
-                        'pretext': 'Error has benn occuerd',
-                        'title': req.url,
-                        'text': err.message,
-                        'footer': 'From_AWS',
-                        'footer_icon': 'https://platform.slack-edge.com/img/default_application_icon.png',
-                        'ts': new Date().getTime() / 1000
-                    }
-                ]
-            })
-        });
+                    'channel': slackConfig.channel,
+                    'username': slackConfig.username,
+                    'icon_emoji': slackConfig.icon_emoji,
+                    'attachments': [
+                        {
+                            'color': 'danger',
+                            'pretext': 'Error has benn occuerd',
+                            'title': req.url,
+                            'text': err.message,
+                            'footer': 'From_AWS',
+                            'footer_icon': 'https://platform.slack-edge.com/img/default_application_icon.png',
+                            'ts': new Date().getTime() / 1000
+                        }
+                    ]
+                })
+            });
+    }
 });
 
 module.exports = app;
