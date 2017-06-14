@@ -367,7 +367,8 @@ const getErrandList = (decode, startIdx, startStation, arrivalStation, order) =>
             let userDoing = {
                 include: [{model: Boxes, attributes: ['boxIdx']}],
                 where: [selectStation, {errandStatus: '진행중'}, {$or: [{requesterIdx: user}, {executorIdx: user}]}],
-                attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx', 'deadlineDt',
+                attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx',
+                    [Errands.sequelize.fn('date_format', Errands.sequelize.col('deadlineDt'),'%m월 %d일 %H시 %i분'), 'deadlineDt'],
                     'itemPrice', 'errandPrice', 'errandStatus']
             };
             if (!startStation) {
@@ -381,7 +382,8 @@ const getErrandList = (decode, startIdx, startStation, arrivalStation, order) =>
             let byStations = {
                 include: [{model: Boxes, attributes: ['boxIdx']}],
                 where: [selectStation, {errandStatus: '매칭대기중'}],
-                attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx', 'deadlineDt',
+                attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx',
+                    [Errands.sequelize.fn('date_format', Errands.sequelize.col('deadlineDt'),'%m월 %d일 %H시 %i분'), 'deadlineDt'],
                     'itemPrice', 'errandPrice', 'errandStatus'],
                 order: [[selectOrder, 'DESC']]
             };

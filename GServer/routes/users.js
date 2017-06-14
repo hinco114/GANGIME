@@ -542,7 +542,7 @@ async function showHistories(req, res, next) {
         }
         const token = await tokenVerify(req.headers);
         const userIdx = token.userIdx;
-        const startIdx = parseInt(req.query.index) - 1 || 0;
+        const startIdx = 0;
         const category = req.query.category;
         let result = await getAllHistories(userIdx, startIdx, category);
         res.send({msg: 'success', data: result});
@@ -566,8 +566,10 @@ const getAllHistories = (userIdx, startIdx, category) => {
             }
 
             // TODO : 페이지네이션 진행 후에 적용하기
-            const result = await Errands.sequelize.query("SELECT errandIdx, errandTitle, startStationIdx, arrivalStationIdx, deadlineDt, itemPrice, errandPrice, errandStatus " +
-                "FROM ERRANDS_TB WHERE " + role + " ORDER BY CASE WHEN errandStatus='수행중' THEN 1 ELSE 2 END, createdAt DESC LIMIT 10 OFFSET " + startIdx).spread((result, metadata) => {
+            const result = await Errands.sequelize.query("SELECT errandIdx, errandTitle, startStationIdx, arrivalStationIdx," +
+                "date_format(deadlineDt, '%m.%d') AS `deadlineDt`, itemPrice, errandPrice, errandStatus " +
+                "FROM ERRANDS_TB WHERE " + role + " ORDER BY CASE WHEN errandStatus='수행중' THEN 1 ELSE 2 END," +
+                "createdAt DESC LIMIT 10 OFFSET " + startIdx).spread((result, metadata) => {
                 resolve(result);
             });
         } catch (err) {
