@@ -7,28 +7,55 @@
 <h2>공지사항 등록</h2>
 <form method='post' action='/notices'>
     <ul>
-        <li> 제목 : <input type='text' name='noticeTitle'> </li>
+        <li> 제목 : <input type='text' name='noticeTitle'></li>
         <dir></dir>
         <li> 내용 : <textarea name='noticeContent' rows="5" cols="50"></textarea></li>
     </ul>
     <input type='submit' value='게시하기'>
 </form>
+
 <h2>입금 처리</h2>
-<form method='post' action='/errands/:errandsIdx/deposit'>
-    <span>
-        ErrandIdx : <input type='text' name='errandIdx'>
-        <input type='submit' value='입금처리'>
-    </span>
-</form>
+<span>
+    ErrandIdx : <input id='depositIdx' type='text' name='errandIdx'>
+    <input type='button' value='입금처리' onclick='sendPostDeposit();'>
+</span>
+
 <h2>환불 처리</h2>
-<form method='post' action='/errands/:errandsIdx/refund'>
-    <span>
-        ErrandIdx : <input type='text' name='errandIdx'>
-        <input type='submit' value='환불처리'>
-    </span>
-</form>
+<span>
+    ErrandIdx : <input id='refundIdx' type='text' name='errandIdx'>
+    <input type='button' value='환불처리' onclick='sendPostRefund();'>
+</span>
 </body>
-<script>
-    console.log("test");
+<script type="text/javascript">
+    function sendPostDeposit() {
+
+        var depositIdx = document.getElementById('depositIdx').value;
+        var url = '/errands/' + errandIdx + '/deposit';
+        var params = '/errands/:errandsIdx/refund';
+
+        $.ajax({
+            url: url,
+            type: 'post',
+            data: params,
+            success: function (data) {
+                console.log("Post Success");
+            }
+        });
+    }
+
+    function sendPostRefund() {
+        var refundIdx = document.getElementById('refundIdx').value;
+        var url = '/errands/' + errandIdx + '/refund';
+        var params = '/errands/:errandsIdx/';
+
+        $.ajax({
+            url: url,
+            type: 'post',
+            data: params,
+            success: function (data) {
+                console.log("Post Success");
+            }
+        });
+    }
 </script>
 </html>

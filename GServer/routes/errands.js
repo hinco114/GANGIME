@@ -394,7 +394,7 @@ const getErrandList = (decode, startIdx, startStation, arrivalStation, order) =>
             let result = await doingResult.concat(restResult);
             await result.forEach(result => {
                 if (typeof result.dataValues.BOXES_TBs[0] === 'undefined') {
-                    result.dataValues.boxIdx = null;
+                    result.dataValues.boxIdx = -1;
                     delete result.dataValues.BOXES_TBs;
                 } else {
                     result.dataValues.boxIdx = result.dataValues.BOXES_TBs[0].boxIdx;
