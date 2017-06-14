@@ -19,7 +19,7 @@ function showAdminPage(req, res) {
 async function postNotice(req, res, next) {
     try {
         if (!req.body.noticeTitle || !req.body.noticeContent) {
-            throw new Error("내용 누락");
+            throw new Error("Notice contents not exist");
         }
         const body = req.body;
         const result = await Notices.create(body);

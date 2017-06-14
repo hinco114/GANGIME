@@ -17,7 +17,9 @@ async function showBankList(req, res, next) {
 
 /* 1_1 은행 목록 가져오기 */
 const getBankList = () => {
-    return Banks.findAll({attributes: ['bankIdx', 'bankName', 'bankImageUrl']});
+    return Banks.findAll(
+        {attributes: ['bankIdx', 'bankName', 'bankImageUrl']}
+    );
 };
 
 module.exports = router;

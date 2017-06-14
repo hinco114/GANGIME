@@ -13,7 +13,7 @@ async function reportUser(req, res, next) {
             throw new Error("errandIdx not exist");
         }
         if (!req.body.reportContent) {
-            throw new Error("errandIdx not exist");
+            throw new Error("reportContent not exist");
         }
         const errandIdx = req.body.errandIdx;
         const reportContent = req.body.reportContent;

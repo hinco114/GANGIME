@@ -419,7 +419,6 @@ const getItemKey = (originName) => {
     return itemKey;
 };
 
-//////////////////////////////////////////////////////////////////////////////
 /* 1. 심부름 찜하기 */
 async function storeErrand(req, res, next) {
     try {
@@ -440,11 +439,10 @@ async function storeErrand(req, res, next) {
 const putIntoBox = (userIdx, errandIdx) => {
     return new Promise(async (resolve, reject) => {
         try {
-            const chkExist = await Boxes.findOne({
-                where: {userIdx: userIdx, errandIdx: errandIdx}
-            });
+            const chkExist = await Boxes.findOne({where: {userIdx: userIdx, errandIdx: errandIdx}});
             if (chkExist === null) {
-                const result = Boxes.create({userIdx: userIdx, errandIdx: errandIdx});
+                // TODO : (DH) await 추가했는데 제대로 작동되는지
+                const result = await Boxes.create({userIdx: userIdx, errandIdx: errandIdx});
                 resolve(result);
             } else {
                 throw new Error('Already stored');
@@ -473,7 +471,10 @@ async function getBoxList(req, res, next) {
 const findBoxeErrands = (startIdx, endIdx, userIdx) => {
     return new Promise(async (resolve, reject) => {
         try {
-            await  Errands.sequelize.query("DELETE B FROM BOXES_TB AS B JOIN ERRANDS_TB AS E ON B.errandIdx=E.errandIdx WHERE E.errandStatus!='매칭대기중';");
+            // TODO : (DH) 분리했는데 쿼리 제대로 실행되는지 체크하기
+            // TODO : (DH) 가능하면 raw query 사용하지 않기
+            await  Errands.sequelize.query("DELETE B FROM BOXES_TB AS B JOIN ERRANDS_TB AS E" +
+                "ON B.errandIdx=E.errandIdx WHERE E.errandStatus!='매칭대기중';");
             const result = await Boxes.findAll({
                 offset: startIdx,
                 limit: 15,
@@ -519,7 +520,7 @@ async function registerFcm(req, res, next) {
     try {
         const token = await tokenVerify(req.headers);
         const userIdx = token.userIdx;
-        let fcmToken = req.body.fcmToken;
+        const fcmToken = req.body.fcmToken;
 
         const result = await addFcm(userIdx, fcmToken);
         if (result[0] === 1) {
@@ -532,7 +533,9 @@ async function registerFcm(req, res, next) {
 
 /* 4_1 FCM 토큰 정보 저장하기 */
 const addFcm = (userIdx, fcmToken) => {
-    return Users.update({fcmToken: fcmToken}, {where: {userIdx: userIdx}});
+    return Users.update(
+        {fcmToken: fcmToken},
+        {where: {userIdx: userIdx}});
 };
 
 /* 5. 심부름 내역 보기(수행,요청) */
@@ -552,7 +555,6 @@ async function showHistories(req, res, next) {
     }
 }
 
-
 /* 5_1 수행 또는 요청 심부름 내역 가져오기 */
 const getAllHistories = (userIdx, startIdx, category) => {
     return new Promise(async (resolve, reject) => {
@@ -566,7 +568,7 @@ const getAllHistories = (userIdx, startIdx, category) => {
                 role = requester;
             }
 
-            // TODO : 페이지네이션 진행 후에 적용하기
+            // TODO : (DH) 가능하면 raw query 사용하지 않기
             const result = await Errands.sequelize.query("SELECT errandIdx, errandTitle, startStationIdx, arrivalStationIdx," +
                 "date_format(deadlineDt, '%m.%d') AS `deadlineDt`, itemPrice, errandPrice, errandStatus " +
                 "FROM ERRANDS_TB WHERE " + role + " ORDER BY CASE WHEN errandStatus='수행중' THEN 1 ELSE 2 END," +
@@ -600,7 +602,10 @@ async function loadFavoriteStations(req, res, next) {
 
 /* 6_1  DB에서 관심 지하철역 불러오기 */
 const getFavoriteStations = (userIdx) => {
-    return UserStation.findAll({where: {userIdx: userIdx}, attributes: ['stationIdx']});
+    return UserStation.findAll({
+        where: {userIdx: userIdx},
+        attributes: ['stationIdx']
+    });
 };
 
 module.exports = router;

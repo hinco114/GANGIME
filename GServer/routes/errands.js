@@ -69,8 +69,10 @@ const createErrand = (body, userIdx) => {
 /* 1_2 지하철역 간의 거리 구하기 */
 const getDistance = (s_lat, s_lon, a_lat, a_lon) => {
     return Stations.findOne({
-        attributes: [[Stations.sequelize.fn('ST_DISTANCE', Stations.sequelize.fn('ST_GeomFromText', `POINT(${s_lat} ${s_lon})`),
-            Stations.sequelize.fn('ST_GeomFromText', `POINT(${a_lat} ${a_lon})`)), 'stationDistance']]
+        attributes: [[
+            Stations.sequelize.fn('ST_DISTANCE',
+                Stations.sequelize.fn('ST_GeomFromText', `POINT(${s_lat} ${s_lon})`),
+                Stations.sequelize.fn('ST_GeomFromText', `POINT(${a_lat} ${a_lon})`)), 'stationDistance']]
     })
 };
 
@@ -90,23 +92,27 @@ const getErrandDetail = (errandIdx) => {
     return new Promise(async (resolve, reject) => {
         try {
             let inputData = ['requesterIdx', 'executorIdx', 'errandTitle', 'errandContent',
-                'startStationIdx', 'arrivalStationIdx', 'deadlineDt', 'itemPrice',
-                'errandPrice', 'errandStatus'];
+                'startStationIdx', 'arrivalStationIdx', 'deadlineDt', 'itemPrice', 'errandPrice', 'errandStatus'];
 
             const statusChk = await Errands.findOne({
-                where: {errandIdx: errandIdx}, attributes: ['errandStatus']
+                where: {errandIdx: errandIdx},
+                attributes: ['errandStatus']
             });
 
             let result = null;
             if (statusChk.dataValues.errandStatus === '취소완료') {
                 result = await Errands.findOne({
                     include: [{model: Cancel, attributes: ['cancelReason']}],
-                    where: {errandIdx: errandIdx}, attributes: inputData
+                    where: {errandIdx: errandIdx},
+                    attributes: inputData
                 });
                 result.dataValues.cancelReason = result.dataValues.CANCEL_TBs[0].cancelReason;
                 delete result.dataValues.CANCEL_TBs;
             } else {
-                result = Errands.findOne({where: {errandIdx: errandIdx}, attributes: inputData});
+                result = Errands.findOne({
+                    where: {errandIdx: errandIdx},
+                    attributes: inputData
+                });
             }
             resolve(result);
         } catch (err) {
@@ -136,7 +142,8 @@ const editErrandContent = (body, errandIdx, userIdx) => {
     return new Promise(async (resolve, reject) => {
         try {
             const statusChk = await Errands.findOne({
-                where: {errandIdx: errandIdx}, attributes: ['errandStatus']
+                where: {errandIdx: errandIdx},
+                attributes: ['errandStatus']
             });
 
             if (statusChk.dataValues.errandStatus === '입금대기중') {
@@ -188,13 +195,17 @@ const registerCancelContent = (userIdx, errandIdx, reason) => {
 
             let changeStatus = null;
             if (!targetUserIdx) {
-                changeStatus = await Errands.update({errandStatus: "취소완료"}, {where: {errandIdx: errandIdx}});
+                changeStatus = await Errands.update(
+                    {errandStatus: "취소완료"},
+                    {where: {errandIdx: errandIdx}});
             } else {
                 if (!reason) {
                     throw new Error('cancelReason not exist');
                 }
                 await Cancel.create({errandIdx: errandIdx, targetUserIdx: targetUserIdx, cancelReason: reason});
-                changeStatus = await Errands.update({errandStatus: "취소요청중"}, {where: {errandIdx: errandIdx}});
+                changeStatus = await Errands.update(
+                    {errandStatus: "취소요청중"},
+                    {where: {errandIdx: errandIdx}});
             }
             resolve(changeStatus);
         } catch (err) {
@@ -212,7 +223,7 @@ async function evaluateErrand(req, res, next) {
         const token = await tokenVerify(req.headers);
         const userIdx = token.userIdx;
         const errandIdx = req.params.errandIdx;
-        const point = parseInt(req.body.stars);
+        const point = req.body.stars;
         const result = await addStars(userIdx, errandIdx, point);
         resSucc(res, result);
     } catch (err) {
@@ -244,13 +255,15 @@ async function askExecuteErrand(req, res, next) {
 const askToRequester = (userIdx, errandIdx) => {
     return new Promise(async (resolve, reject) => {
         try {
+            // TODO : (DH)  시간제대로 되는지 체크해보기
             const startTime = new Date(Date.now());
             const endTime = new Date(startTime.getTime() + 50000); // TODO: (DH) 시간 변경하기, 현재는 테스트 시간으로 설정함
             const settings = {start: startTime, end: endTime};
             await countFiveMinutes(settings, errandIdx);
 
             const askExecuting = await Errands.update(
-                {errandStatus: '신청진행중', executorIdx: userIdx}, {where: {errandIdx: errandIdx}}
+                {errandStatus: '신청진행중', executorIdx: userIdx},
+                {where: {errandIdx: errandIdx}}
             );
             resolve(askExecuting);
         } catch (err) {
@@ -262,10 +275,15 @@ const askToRequester = (userIdx, errandIdx) => {
 /* 6_2 스케줄러로 5분 뒤에 심부름 상태 체크하기 */
 const countFiveMinutes = (settings, errandIdx) => {
     const countTimer = schedule.scheduleJob(settings, async () => {
-        const restResult = await Errands.findOne({where: [{errandIdx: errandIdx}], attributes: ['errandStatus']});
+        const restResult = await Errands.findOne({
+            where: [{errandIdx: errandIdx}],
+            attributes: ['errandStatus']
+        });
         countTimer.cancel();
         if (restResult.dataValues.errandStatus === '신청진행중') {
-            Errands.update({errandStatus: '매칭대기중'}, {where: {errandIdx: errandIdx}, returning: true});
+            Errands.update(
+                {errandStatus: '매칭대기중'},
+                {where: {errandIdx: errandIdx}});
         }
         // TODO : 5분 체크 후에 push해서는 심부름 요청에 대한 결과 보내주기
     });
@@ -294,11 +312,12 @@ async function acceptErrand(req, res, next) {
 /* 8. 심부름 요청 거절 */
 async function rejectErrandRequest(req, res, next) {
     try {
-        // TODO : (DH) '7. 심부름 요청 승낙'하면 status가 변경되는지 체크하기
         const token = await tokenVerify(req.headers);
         const userIdx = token.userIdx;
         const errandIdx = req.params.errandIdx;
-        const chkStatus = await Errands.findById(errandIdx, {attributes: ['errandStatus']});
+        // TODO : (DH) 제대로 실행되나 체크하기
+        // const chkStatus = await Errands.findById(errandIdx, {attributes: ['errandStatus']});
+        const chkStatus = await checkErrandStatus(errandIdx);
         if (chkStatus.dataValues.errandStatus === '매칭대기중') {
             throw new Error('Time already gone');
         }
@@ -312,15 +331,16 @@ async function rejectErrandRequest(req, res, next) {
     }
 }
 
-/* 8_1 요청이 들어온 심부름 거절하기 */
+/* 8_1 거절할 수 있는 시간이 지났는지 체크하기  */
+const checkErrandStatus = (errandIdx) => {
+    return Errands.findById(errandIdx, {attributes: ['errandStatus']});
+};
+
+/* 8_2 요청이 들어온 심부름 거절하기 */
 const rejectRequester = (userIdx, errandIdx) => {
-    return Errands.update({executorIdx: null}, {
-        where: {
-            errandIdx: errandIdx,
-            requesterIdx: userIdx,
-            errandStatus: '신청진행중'
-        }
-    });
+    return Errands.update(
+        {executorIdx: null},
+        {where: {errandIdx: errandIdx, requesterIdx: userIdx, errandStatus: '신청진행중'}});
 };
 
 /* 9. 지하철역에 따른 심부름 목록 불러오기*/
@@ -330,8 +350,8 @@ async function getStationsErrands(req, res, next) {
         if (req.headers.token) {
             decode = await tokenVerify(req.headers);
         }
-        // TODO : (DH) 페이지네이션
         const startIdx = req.query.index - 1 || 0;
+
         if (!req.query.start && req.query.arrival) {
             throw new Error('You must enter arrivalStation');
         }
@@ -361,14 +381,14 @@ const getErrandList = (decode, startIdx, startStation, arrivalStation, order) =>
             } else if (order === 'distance') {
                 selectOrder = 'stationDistance';
             } else if (order === 'price') {
-                selectOrder = 'errandPrice'; // TODO : (DH) 심부름 + 물품 가격의 합 구하는 법(+ 역할)
+                selectOrder = 'errandPrice'; // TODO : (DH) 심부름 + 물품 가격의 합 구하는 법 찾아보기(시퀄에서는 그냥 +)
             }
 
             let userDoing = {
                 include: [{model: Boxes, attributes: ['boxIdx']}],
                 where: [selectStation, {errandStatus: '진행중'}, {$or: [{requesterIdx: user}, {executorIdx: user}]}],
                 attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx',
-                    [Errands.sequelize.fn('date_format', Errands.sequelize.col('deadlineDt'),'%m월 %d일 %H시 %i분'), 'deadlineDt'],
+                    [Errands.sequelize.fn('date_format', Errands.sequelize.col('deadlineDt'), '%m월 %d일 %H시 %i분'), 'deadlineDt'],
                     'itemPrice', 'errandPrice', 'errandStatus']
             };
             if (!startStation) {
@@ -383,7 +403,7 @@ const getErrandList = (decode, startIdx, startStation, arrivalStation, order) =>
                 include: [{model: Boxes, attributes: ['boxIdx']}],
                 where: [selectStation, {errandStatus: '매칭대기중'}],
                 attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx',
-                    [Errands.sequelize.fn('date_format', Errands.sequelize.col('deadlineDt'),'%m월 %d일 %H시 %i분'), 'deadlineDt'],
+                    [Errands.sequelize.fn('date_format', Errands.sequelize.col('deadlineDt'), '%m월 %d일 %H시 %i분'), 'deadlineDt'],
                     'itemPrice', 'errandPrice', 'errandStatus'],
                 order: [[selectOrder, 'DESC']]
             };
@@ -427,7 +447,9 @@ async function processDeposit(req, res, next) {
 
 /* 10_1 해당 심부름 상태 '매칭대기중'으로 수정 */
 const applyDeposit = (errandIdx) => {
-    return Errands.update({errandStatus: '매칭대기중'}, {where: {errandIdx: errandIdx}});
+    return Errands.update(
+        {errandStatus: '매칭대기중'},
+        {where: {errandIdx: errandIdx}});
 };
 
 /* 11. 관리자 페이지 : 환불 처리 */
@@ -445,7 +467,9 @@ async function processRefund(req, res, next) {
 
 /* 11_1 해당 심부름 상태 '취소완료'으로 수정 */
 const applyRefund = (errandIdx) => {
-    return Errands.update({errandStatus: '취소완료'}, {where: {errandIdx: errandIdx}});
+    return Errands.update(
+        {errandStatus: '취소완료'},
+        {where: {errandIdx: errandIdx}});
 };
 
 /* 12. 채팅내용 가져오기 */
