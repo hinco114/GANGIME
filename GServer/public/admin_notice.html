@@ -26,34 +26,30 @@
     <input type='button' value='환불처리' onclick='sendPostRefund();'>
 </span>
 </body>
-<script type="text/javascript">
+<script>
     function sendPostDeposit() {
-
         var depositIdx = document.getElementById('depositIdx').value;
-        var url = '/errands/' + errandIdx + '/deposit';
-        var params = '/errands/:errandsIdx/refund';
+        var url = '/errands/' + depositIdx + '/deposit';
 
         $.ajax({
             url: url,
             type: 'post',
-            data: params,
+            data: '',
             success: function (data) {
-                console.log("Post Success");
+                console.log('Post Success');
             }
         });
     }
 
     function sendPostRefund() {
         var refundIdx = document.getElementById('refundIdx').value;
-        var url = '/errands/' + errandIdx + '/refund';
-        var params = '/errands/:errandsIdx/';
+        var url = '/errands/' + refundIdx + '/refund';
 
         $.ajax({
             url: url,
             type: 'post',
-            data: params,
-            success: function (data) {
-                console.log("Post Success");
+            success: function () {
+                console.log('Post Success');
             }
         });
     }

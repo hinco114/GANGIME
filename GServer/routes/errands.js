@@ -26,8 +26,8 @@ router.route('/:errandIdx/chats')
     .post(addChats)
     .get(getChats);
 router.route('/:errandIdx/accept').post(acceptErrand);
-router.route('/errands/:errandsIdx/deposit').post(processDeposit);
-router.route('/errands/:errandsIdx/refund').post(processRefund);
+router.route('/:errandIdx/deposit').post(processDeposit);
+router.route('/:errandIdx/refund').post(processRefund);
 
 /* 1. 심부름 등록하기 */
 async function registerErrand(req, res, next) {
@@ -411,8 +411,7 @@ const getErrandList = (decode, startIdx, startStation, arrivalStation, order) =>
 /* 10. 관리자 페이지 : 입금 처리 */
 async function processDeposit(req, res, next) {
     try {
-        // TODO : (DH) Html에서 errandsIdx를 input에서 입력받아서 url 쿼리에 넣을 수 있는지 알아보고는 수정하기
-        const errandIdx = req.body.errandIdx;
+        const errandIdx = req.params.errandIdx;
         const result = await applyDeposit(errandIdx);
         if (result[0] === 1) {
             res.send({msg: 'success'});
@@ -430,7 +429,7 @@ const applyDeposit = (errandIdx) => {
 /* 11. 관리자 페이지 : 환불 처리 */
 async function processRefund(req, res, next) {
     try {
-        const errandIdx = req.body.errandIdx;
+        const errandIdx = req.params.errandIdx;
         const result = await applyRefund(errandIdx);
         if (result[0] === 1) {
             res.send({msg: 'success'});
