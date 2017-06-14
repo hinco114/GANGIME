@@ -155,15 +155,14 @@ const editErrandContent = (body, errandIdx, userIdx) => {
 /* 4. 상대방에게 심부름 취소 요청하기 */
 async function requestCancelErrand(req, res, next) {
     try {
-        if (!req.body.cancelReason) {
-            throw new Error('cancelReason not exist');
-        }
         const token = await tokenVerify(req.headers);
         const userIdx = token.userIdx;
         const errandIdx = req.params.errandIdx;
-        const reason = req.body.cancelReason;
+        let reason = req.body.cancelReason || null;
         const result = await registerCancelContent(userIdx, errandIdx, reason);
-        resSucc(res, result);
+        if (result[0] === 1) {
+            res.send({msg: 'success'});
+        }
     } catch (err) {
         next(err);
     }
@@ -179,13 +178,24 @@ const registerCancelContent = (userIdx, errandIdx, reason) => {
             });
             const requesterIdx = findTarget.dataValues.requesterIdx;
             const executorIdx = findTarget.dataValues.executorIdx;
-            const targetUserIdx = (requesterIdx === userIdx) ? executorIdx : requesterIdx;
 
-            await Cancel.create({errandIdx: errandIdx, targetUserIdx: targetUserIdx, cancelReason: reason});
-            // TODO : (DH) 상대방 있는 경우에 적용하기
-            const changeStatus = await Errands.update(
-                {errandStatus: "취소요청"}, {where: {errandIdx: errandIdx}}, {returning: true}
-            );
+            let targetUserIdx = null;
+            if (requesterIdx === userIdx) {
+                targetUserIdx = executorIdx;
+            } else if (executorIdx === userIdx) {
+                targetUserIdx = requesterIdx;
+            }
+
+            let changeStatus = null;
+            if (!targetUserIdx) {
+                changeStatus = await Errands.update({errandStatus: "취소완료"}, {where: {errandIdx: errandIdx}});
+            } else {
+                if (!reason) {
+                    throw new Error('cancelReason not exist');
+                }
+                await Cancel.create({errandIdx: errandIdx, targetUserIdx: targetUserIdx, cancelReason: reason});
+                changeStatus = await Errands.update({errandStatus: "취소요청중"}, {where: {errandIdx: errandIdx}});
+            }
             resolve(changeStatus);
         } catch (err) {
             reject(err);
