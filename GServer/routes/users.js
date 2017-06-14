@@ -16,7 +16,6 @@ const UserStation = require('../models').USER_STATIONS_TB;
 const emailConfig = require('../config/config.json')['nodemailer'];
 const s3Config = require('../config/config.json')['S3'];
 const resSucc = require('./gangime').resSucc;
-const resPageSucc = require('./gangime').resPageSucc;
 const createToken = require('./gangime').createToken;
 const tokenVerify = require('./gangime').tokenVerify;
 
@@ -464,7 +463,7 @@ async function getBoxList(req, res, next) {
         const token = await tokenVerify(req.headers);
         const userIdx = token.userIdx;
         let result = await findBoxeErrands(startIdx, endIdx, userIdx);
-        resPageSucc(res, result);
+        resSucc(res, result);
     } catch (err) {
         next(err);
     }
@@ -547,8 +546,7 @@ async function showHistories(req, res, next) {
         const startIdx = req.query.index - 1 || 0;
         const category = req.query.category;
         let result = await getAllHistories(userIdx, startIdx, category);
-        resPageSucc(res, result);
-        // res.send({msg: 'success', data: result});
+        resSucc(res, result);
     } catch (err) {
         next(err);
     }

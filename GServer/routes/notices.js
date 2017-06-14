@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const resSucc = require('./gangime').resSucc;
-const resPageSucc = require('./gangime').resPageSucc;
 const Notices = require('../models/').NOTICES_TB;
 
 router.route('/new').get(showAdminPage);
@@ -37,7 +36,7 @@ async function showNoticeList(req, res, next) {
         const result = await getAllNoticesList(startIdx);
         result.start = startIdx;
         result.end = startIdx + 10;
-        resPageSucc(res, result);
+        resSucc(res, result);
     } catch (err) {
         next(err);
     }

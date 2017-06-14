@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const schedule = require('node-schedule');
 const resSucc = require('./gangime').resSucc;
-const resPageSucc = require('./gangime').resPageSucc;
 const tokenVerify = require('./gangime').tokenVerify;
 const Errands = require('../models/').ERRANDS_TB;
 const Cancel = require('../models/').CANCEL_TB;
@@ -341,8 +340,7 @@ async function getStationsErrands(req, res, next) {
         const order = req.query.order || 'time';
 
         const result = await getErrandList(decode, startIdx, startStation, arrivalStation, order);
-        resPageSucc(res, result);
-        //resSucc(res, result);
+        resSucc(res, result);
     } catch (err) {
         next(err);
     }
