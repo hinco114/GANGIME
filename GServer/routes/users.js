@@ -480,15 +480,18 @@ const findBoxeErrands = (startIdx, endIdx, userIdx) => {
                 attributes: ['errandIdx'],
                 order: [['createdAt', 'DESC']],
                 include: [{
-                    model: Errands, attributes: ['errandTitle',
-                        'startStationIdx', 'arrivalStationIdx', 'errandPrice', 'itemPrice']
-                }]
+                    model: Errands, attributes: ['errandTitle', 'startStationIdx', 'arrivalStationIdx',
+                        [Errands.sequelize.fn('date_format', Errands.sequelize.col('deadlineDt'), '%m-%d %H:%i'), 'deadlineDt'],
+                        'errandStatus', 'errandPrice', 'itemPrice']
+        }]
             });
 
             await result.forEach(result => {
                 result.dataValues.errandTitle = result.dataValues.ERRANDS_TB.dataValues.errandTitle;
                 result.dataValues.startStationIdx = result.dataValues.ERRANDS_TB.dataValues.startStationIdx;
                 result.dataValues.arrivalStationIdx = result.dataValues.ERRANDS_TB.dataValues.arrivalStationIdx;
+                result.dataValues.deadlineDt = result.dataValues.ERRANDS_TB.dataValues.deadlineDt;
+                result.dataValues.errandStatus = result.dataValues.ERRANDS_TB.dataValues.errandStatus;
                 result.dataValues.errandPrice = result.dataValues.ERRANDS_TB.dataValues.errandPrice;
                 result.dataValues.itemPrice = result.dataValues.ERRANDS_TB.dataValues.itemPrice;
                 delete result.dataValues.ERRANDS_TB;
