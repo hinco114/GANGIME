@@ -581,7 +581,7 @@ const getAllHistories = (userIdx, startIdx, category) => {
             }
 
             // TODO : (DH) 가능하면 raw query 사용하지 않기
-            const result = await Errands.sequelize.query("SELECT errandIdx, errandTitle, startStationIdx, arrivalStationIdx," +
+            const result = await Errands.sequelize.query("SELECT errandIdx, errandTitle, errandContent, startStationIdx, arrivalStationIdx," +
                 "date_format(deadlineDt, '%m.%d') AS `deadlineDt`, itemPrice, errandPrice, errandStatus " +
                 "FROM ERRANDS_TB WHERE " + role + " ORDER BY CASE WHEN errandStatus='수행중' THEN 1 ELSE 2 END," +
                 "createdAt DESC LIMIT 20 OFFSET " + startIdx).spread((result, metadata) => {

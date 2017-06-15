@@ -81,6 +81,13 @@ async function showErrandDetail(req, res, next) {
     try {
         const errandIdx = req.params.errandIdx;
         const result = await getErrandDetail(errandIdx);
+        console.log(result.dataValues);
+        if (result.dataValues.requesterIdx === null) {
+            result.dataValues.requesterIdx = -1;
+        }
+        if (result.dataValues.executorIdx === null) {
+            result.dataValues.executorIdx = -1;
+        }
         resSucc(res, result);
     } catch (err) {
         next(err);
