@@ -571,19 +571,17 @@ async function showHistories(req, res, next) {
 const getAllHistories = (userIdx, startIdx, category) => {
     return new Promise(async (resolve, reject) => {
         try {
-            let requester = "requesterIdx = " + userIdx;
-            let executor = "executorIdx = " + userIdx;
-            let role = null;
-            if (category === "execute") {
-                role = executor;
-            } else if (category === "request") {
-                role = requester;
+            let inputQuery = null;
+            if (category === "execute") { // 수행자
+                inputQuery = "errandStatus IN ('신청진행중', '진행중', '취소완료', '완료요청중', '수행완료') AND executorIdx = " + userIdx;
+            } else if (category === "request") { // 요청자
+                inputQuery = "errandStatus IN ('입금대기중', '매칭대기중', '진행중', '매칭실패', '취소완료', '완료요청중', '수행완료') AND requesterIdx = " + userIdx;
             }
 
             // TODO : (DH) 가능하면 raw query 사용하지 않기
             const result = await Errands.sequelize.query("SELECT errandIdx, errandTitle, errandContent, startStationIdx, arrivalStationIdx," +
                 "date_format(deadlineDt, '%m.%d') AS `deadlineDt`, itemPrice, errandPrice, errandStatus " +
-                "FROM ERRANDS_TB WHERE " + role + " ORDER BY CASE WHEN errandStatus='수행중' THEN 1 ELSE 2 END," +
+                "FROM ERRANDS_TB WHERE " + inputQuery + " ORDER BY CASE WHEN errandStatus='수행중' THEN 1 ELSE 2 END," +
                 "createdAt DESC LIMIT 20 OFFSET " + startIdx).spread((result, metadata) => {
                 result.start = startIdx;
                 result.end = startIdx + 20;
