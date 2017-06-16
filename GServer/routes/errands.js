@@ -341,12 +341,7 @@ async function rejectErrandRequest(req, res, next) {
     }
 }
 
-/* 8_1 거절할 수 있는 시간이 지났는지 체크하기  */
-const checkErrandStatus = (errandIdx) => {
-    return Errands.findById(errandIdx, {attributes: ['errandStatus']});
-};
-
-/* 8_2 요청이 들어온 심부름 거절하기 */
+/* 8_1 요청이 들어온 심부름 거절하기 */
 const rejectRequester = (userIdx, errandIdx) => {
     return Errands.update(
         {executorIdx: null},
@@ -543,10 +538,42 @@ const updateAskErrandDone  = (userIdx, errandIdx) => {
         {where: {userIdx: userIdx, errandIdx:errandIdx}});
 };
 
-// /* 14. 심부름 완료 요청 승낙 */
-//
-// router.route('/:errandIdx/done').post(finishErrand);
+/* 14. 심부름 완료 요청 승낙 */
+async function finishErrand(req, res, next) {
+    try {
+        const token = await tokenVerify(req.headers);
+        const userIdx = token.userIdx;
+        let errandIdx = req.params.errandIdx;
+        const errand = await Errands.findById(errandIdx);
+        if (!errand) {
+            throw new Error('Errand not exist');
+        }
+        const chkStatus = await checkErrandStatus(errandIdx);
+        if (chkStatus.dataValues.errandStatus !== '완료요청') {
+            throw new Error('Opponent do not ask completion');
+        }
 
+        const result = await updateErrandDone(userIdx, errandIdx);
+        if (result[0] === 1) {
+            res.send({msg: 'success'});
+        }
+    } catch (err) {
+        next(err);
+    }
+}
+
+/* 14_1 '수행완료'로 상태 변경 */
+const updateErrandDone  = (userIdx, errandIdx) => {
+    return Errands.update(
+        {errandStatus: '수행요청'},
+        {where: {userIdx: userIdx, errandIdx:errandIdx}});
+};
+
+
+/* 심부름 상태 체크  */
+const checkErrandStatus = (errandIdx) => {
+    return Errands.findById(errandIdx, {attributes: ['errandStatus']});
+};
 
 async function addChats(req, res, next) {
     try {
