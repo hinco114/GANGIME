@@ -211,7 +211,8 @@ const registerCancelContent = (userIdx, errandIdx, reason) => {
                 }
                 await Cancel.create({errandIdx: errandIdx, targetUserIdx: targetUserIdx, cancelReason: reason});
                 changeStatus = await Errands.update(
-                    {errandStatus: "취소요청중"},
+                    {errandStatus: "취소완료"},
+                    // {errandStatus: "취소요청중"},
                     {where: {errandIdx: errandIdx}});
             }
             resolve(changeStatus);
@@ -224,7 +225,7 @@ const registerCancelContent = (userIdx, errandIdx, reason) => {
 /* 5. 심부름 평가하기  */
 async function evaluateErrand(req, res, next) {
     try {
-        if (req.body.stars) {
+        if (!req.body.stars) {
             throw new Error('point not exist');
         }
         const token = await tokenVerify(req.headers);
