@@ -246,17 +246,16 @@ const addStars = (userIdx, errandIdx, point) => {
     return new Promise(async (resolve, reject) => {
         try {
             const result = await Stars.create({userIdx: userIdx, errandIdx: errandIdx, point: point});
-            // TODO : (DH) 평가할 때 USERS_TB 안에있는 평가 컬럼에 평균값 넣어주기
             // TODO : (DH) 따라서 처음 USERS_TB 안에 있는 것의 값이 null이면 0 반환해주기
             const starsAvg = await Stars.findOne({
-                attributes: [[sequelize.fn('AVG', Stars.sequelize.col(point)), 'pointAvg']],
+                attributes: [[Stars.sequelize.fn('AVG', Stars.sequelize.col('point')), 'pointAvg']],
                 where: {userIdx: userIdx}
             });
-            await Users.update({
-                userStarAvg: starsAvg.dataValues.pointAvg
-            });
-
-            resovle(result);
+            await Users.update(
+                {userStarAvg: starsAvg.dataValues.pointAvg},
+                {where: {userIdx: userIdx}}
+            );
+            resolve(result);
         } catch (err) {
             reject(err);
         }
