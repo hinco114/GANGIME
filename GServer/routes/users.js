@@ -323,7 +323,7 @@ async function newProfilePic(req, res, next) {
 async function getProfile(req, res, next) {
     try {
         const conditions = {
-            attributes: ['userIdx', 'userNickname', 'userEmail', 'userStarAvg', 'profileThumbnail']
+            attributes: ['userIdx', 'userNickname', 'userEmail', 'userPhone', 'userStarAvg', 'profileThumbnail']
         };
         const result = await Users.findById(req.params.userIdx, conditions);
         resSucc(res, result);

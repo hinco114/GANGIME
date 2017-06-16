@@ -532,10 +532,30 @@ async function askErrandDone(req, res, next) {
 }
 
 /* 13_1 '완료요청'으로 상태 변경 */
-const updateAskErrandDone  = (userIdx, errandIdx) => {
-    return Errands.update(
-        {errandStatus: '완료요청'},
-        {where: {userIdx: userIdx, errandIdx:errandIdx}});
+const updateAskErrandDone = (userIdx, errandIdx) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const userIdentify = await Errands.findOne({
+                where: {errandIdx: errandIdx},
+                attributes: ['requesterIdx', 'executorIdx']
+            });
+            const requesterIdx = userIdentify.dataValues.requesterIdx;
+            const executorIdx = userIdentify.dataValues.executorIdx;
+            let targetUser = null;
+            if (requesterIdx === userIdx) {
+                targetUser = executorIdx;
+            } else if (executorIdx === userIdx) {
+                targetUser = requesterIdx;
+            }
+
+            const result = await Errands.update(
+                {errandStatus: '완료요청'},
+                {where: {errandIdx: errandIdx}});
+            resolve(result);
+        } catch (err) {
+            reject(err);
+        }
+    });
 };
 
 /* 14. 심부름 완료 요청 승낙 */
@@ -563,10 +583,10 @@ async function finishErrand(req, res, next) {
 }
 
 /* 14_1 '수행완료'로 상태 변경 */
-const updateErrandDone  = (userIdx, errandIdx) => {
+const updateErrandDone = (userIdx, errandIdx) => {
     return Errands.update(
         {errandStatus: '수행요청'},
-        {where: {userIdx: userIdx, errandIdx:errandIdx}});
+        {where: {errandIdx: errandIdx}});
 };
 
 
