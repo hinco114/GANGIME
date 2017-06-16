@@ -3,7 +3,7 @@ const router = express.Router();
 const resSucc = require('./gangime').resSucc;
 const Stations = require('../models/').STATIONS_TB;
 
-router.route('/').get(getStationList);
+// router.route('/').get(getStationList);
 router.route('/closed/').post(getNearStation);
 
 /* 1. 지하철 목록 가져오기 */
