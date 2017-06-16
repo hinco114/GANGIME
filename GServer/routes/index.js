@@ -11,9 +11,6 @@ router.route('/admin').get(showAdminPage);
 
 /*1. 관리자 페이지 */
 function showAdminPage(req, res) {
-    console.log(path.resolve('./public/admin_notice.html'));
-    console.log('./public/admin_notice.html');
-    console.log('../public/admin_notice.html')
     res.sendFile(path.resolve('./public/admin_notice.html'));
 }
 

@@ -24,11 +24,11 @@ const getAllList = () => {
 /* 2. 가까운 역 찾기 */
 async function getNearStation(req, res, next) {
     try {
-        if (!req.body.lat || !req.body.lon) {
+        if (!req.body.Latitude || !req.body.Longitude) {
             throw new Error('Location not exist');
         }
-        const lat = req.body.lat;
-        const lon = req.body.lon;
+        const lat = req.body.Latitude;
+        const lon = req.body.Longitude;
         const result = await findStation(lat, lon);
         resSucc(res, result);
     } catch (err) {

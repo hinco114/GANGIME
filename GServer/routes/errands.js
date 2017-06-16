@@ -22,12 +22,14 @@ router.route('/:errandIdx/star').post(evaluateErrand);
 router.route('/:errandIdx/ask').post(askExecuteErrand);
 router.route('/:errandIdx/accept').post(acceptErrand);
 router.route('/:errandIdx/reject').post(rejectErrandRequest);
-router.route('/:errandIdx/chats')
-    .post(addChats)
-    .get(getChats);
 router.route('/:errandIdx/accept').post(acceptErrand);
 router.route('/:errandIdx/deposit').post(processDeposit);
 router.route('/:errandIdx/refund').post(processRefund);
+router.route('/:errandIdx/askDone').post(askErrandDone);
+router.route('/:errandIdx/done').post(finishErrand);
+router.route('/:errandIdx/chats')
+    .post(addChats)
+    .get(getChats);
 
 /* 1. 심부름 등록하기 */
 async function registerErrand(req, res, next) {
@@ -98,7 +100,7 @@ async function showErrandDetail(req, res, next) {
 const getErrandDetail = (errandIdx) => {
     return new Promise(async (resolve, reject) => {
         try {
-            let inputData = ['requesterIdx', 'executorIdx', 'errandTitle', 'errandContent',
+            let inputData = ['errandIdx', 'requesterIdx', 'executorIdx', 'errandTitle', 'errandContent',
                 'startStationIdx', 'arrivalStationIdx', 'deadlineDt', 'itemPrice', 'errandPrice', 'errandStatus'];
 
             const statusChk = await Errands.findOne({
@@ -514,6 +516,37 @@ async function getChats(req, res, next) {
         next(err);
     }
 }
+
+/* 13. 심부름 완료 요청 */
+async function askErrandDone(req, res, next) {
+    try {
+        const token = await tokenVerify(req.headers);
+        const userIdx = token.userIdx;
+        let errandIdx = req.params.errandIdx;
+        const errand = await Errands.findById(errandIdx);
+        if (!errand) {
+            throw new Error('Errand not exist');
+        }
+        const result = await updateAskErrandDone(userIdx, errandIdx);
+        if (result[0] === 1) {
+            res.send({msg: 'success'});
+        }
+    } catch (err) {
+        next(err);
+    }
+}
+
+/* 13_1 '완료요청'으로 상태 변경 */
+const updateAskErrandDone  = (userIdx, errandIdx) => {
+    return Errands.update(
+        {errandStatus: '완료요청'},
+        {where: {userIdx: userIdx, errandIdx:errandIdx}});
+};
+
+// /* 14. 심부름 완료 요청 승낙 */
+//
+// router.route('/:errandIdx/done').post(finishErrand);
+
 
 async function addChats(req, res, next) {
     try {
