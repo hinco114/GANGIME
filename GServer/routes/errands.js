@@ -105,11 +105,12 @@ const getErrandDetail = (errandIdx) => {
 
             const statusChk = await Errands.findOne({
                 where: {errandIdx: errandIdx},
-                attributes: ['errandStatus']
+                attributes: ['errandStatus', 'executorIdx']
             });
 
+            console.log(statusChk.dataValues.executorIdx);
             let result = null;
-            if (statusChk.dataValues.errandStatus === '취소완료') {
+            if (statusChk.dataValues.errandStatus === '취소완료' && statusChk.dataValues.executorIdx) {
                 result = await Errands.findOne({
                     include: [{model: Cancel, attributes: ['cancelReason']}],
                     where: {errandIdx: errandIdx},
@@ -566,7 +567,7 @@ const updateAskErrandDone = (userIdx, errandIdx) => {
             }
 
             const result = await Errands.update(
-                {errandStatus: '완료요청'},
+                {errandStatus: '완료요청중'},
                 {where: {errandIdx: errandIdx}});
             resolve(result);
         } catch (err) {
@@ -586,7 +587,7 @@ async function finishErrand(req, res, next) {
             throw new Error('Errand not exist');
         }
         const chkStatus = await checkErrandStatus(errandIdx);
-        if (chkStatus.dataValues.errandStatus !== '완료요청') {
+        if (chkStatus.dataValues.errandStatus !== '완료요청중') {
             throw new Error('Opponent do not ask completion');
         }
 
@@ -602,7 +603,7 @@ async function finishErrand(req, res, next) {
 /* 14_1 '수행완료'로 상태 변경 */
 const updateErrandDone = (userIdx, errandIdx) => {
     return Errands.update(
-        {errandStatus: '수행요청'},
+        {errandStatus: '심부름완료'},
         {where: {errandIdx: errandIdx}});
 };
 
