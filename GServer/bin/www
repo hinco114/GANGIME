@@ -188,6 +188,29 @@ function getStationName(name) {
     }
 }
 
+// function initCancel() {
+//     return new Promise((resolve, reject) => {
+//         models.CANCEL_TB.findAndCountAll({logging: false})
+//             .then(result => {
+//                 if(result.count === 0){
+//                     const csv = require('csvtojson');
+//                     const csvFilePath = __dirname + '/../config/cancel_data.csv';
+//                     csv()
+//                         .fromFile(csvFilePath)
+//                         .on('end_parsed', (cancels) => {
+//                             models.CANCEL_TB.bulkCreate(cancels, {logging:false})
+//                                 .catch(err => {
+//                                     console.log('This is err : ', err);
+//                                     reject(err);
+//                                 });
+//                             console.log('Cancel Data init Complete');
+//                             resolve();
+//                         })
+//                 }
+//             })
+//     })
+// }
+
 // sync with Initializing Dummy Datas
 models.sequelize.sync().then(async () => {
     server.listen(port);
@@ -199,10 +222,12 @@ models.sequelize.sync().then(async () => {
         await initUser();
         await initStation();
         await initErrand();
+        // await initCancel();
     } catch (err) {
         console.log(err.message);
     }
 });
+
 /**
  * Create HTTP server.
  */
