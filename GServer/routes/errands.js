@@ -456,7 +456,7 @@ async function acceptErrand(req, res, next) {
             requesterIdx: result.dataValues.requesterIdx,
         };
         const newChat = await errandChats.create(creation);
-        result.errandStatus = '수행중';
+        result.errandStatus = '진행중';
         result.errandChatId = newChat._id.toString();
         result.save();
         resSucc(res, result);
@@ -478,6 +478,21 @@ async function rejectErrandRequest(req, res, next) {
         }
 
         const result = await rejectRequester(userIdx, errandIdx);
+        const userFcmToken = await getFcmToken(userIdx);
+        const message = {
+            to: userFcmToken.dataValues.fcmToken, // 상대방 유저 토큰
+            data: {
+                errandIdx: errandResult.dataValues.errandIdx,
+                errandStatus: errandResult.dataValues.errandStatus,
+                errandTitle: errandResult.dataValues.errandTitle,
+                errandContent: errandResult.dataValues.content,
+                startStationIdx: errandResult.dataValues.startStationIdx,
+                arrivalStationIdx: errandResult.dataValues.arrivalStationIdx,
+                itemPrice: errandResult.dataValues.itemPrice,
+                errandPrice: errandResult.dataValues.errandPrice
+            }
+        };
+        sendFcmMessage(message);
         if (result[0] === 1) {
             res.send({msg: 'success'});
         }
@@ -489,7 +504,7 @@ async function rejectErrandRequest(req, res, next) {
 /* 8_1 요청이 들어온 심부름 거절하기 */
 const rejectRequester = (userIdx, errandIdx) => {
     return Errands.update(
-        {executorIdx: null},
+        {executorIdx: null, errandStatus: '매칭대기중'},
         {where: {errandIdx: errandIdx, requesterIdx: userIdx, errandStatus: '신청진행중'}});
 };
 
