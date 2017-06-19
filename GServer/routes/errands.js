@@ -235,7 +235,7 @@ async function requestCancelErrand(req, res, next) {
         if (result[0] === 1) {
             res.send({msg: 'success'});
         }
-        if(reason){
+        if (reason) {
             await fcmRequestCancel(errandIdx, userIdx, reason);
         }
     } catch (err) {
@@ -283,27 +283,31 @@ const registerCancelContent = (userIdx, errandIdx, reason) => {
     })
 };
 
-
 /* 4_2 FCM */
-const fcmRequestCancel = (uerrandIdx, serIdx, reason) => {
+const fcmRequestCancel = (errandIdx, userIdx, reason) => {
     return new Promise(async (resolve, reject) => {
-        const userFcmToken = await getFcmToken(userIdx);
-        const errandResult = await findById(errandIdx, {attributes: ['errandStatus', 'errandTitle']});
-        const userResult = await findById(userIdx, {attributes: ['errandStatus']});
-        console.log("errandStatus ; " + errandResult.dataValues.errandStatus);
-        console.log("errandStatus ; " + userResult.dataValues.userNickName);
-        const message = {
-            to : userFcmToken, // 상대방 유저 토큰
-            data : {
-                cancelReason: reason,
-                errandStatus: errandResult.dataValues.errandStatus
-            },
-            notification: {
-                title: '심부름 취소',
-                body: userResult.dataValues.userNickName + '님이 [' + errandResult.dataValues.errandTitle + '] 심부름 취소 통보를 하셨습니다'
-            }
-        };
-        sendFcmMessage(message);
+        try {
+            const userFcmToken = await getFcmToken(userIdx);
+            const errandResult = await findById(errandIdx, {attributes: ['errandStatus', 'errandTitle']});
+            const userResult = await findById(userIdx, {attributes: ['errandStatus']});
+            console.log("errandStatus ; " + errandResult.dataValues.errandStatus);
+            console.log("errandStatus ; " + userResult.dataValues.userNickName);
+            const message = {
+                to: userFcmToken, // 상대방 유저 토큰
+                data: {
+                    cancelReason: reason,
+                    errandStatus: errandResult.dataValues.errandStatus
+                },
+                notification: {
+                    title: '심부름 취소',
+                    body: userResult.dataValues.userNickName + '님이 [' + errandResult.dataValues.errandTitle + '] 심부름 취소 통보를 하셨습니다'
+                }
+            };
+            sendFcmMessage(message);
+            resolve();
+        } catch (err) {
+            reject(err);
+        }
     });
 };
 
