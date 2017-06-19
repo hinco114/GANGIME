@@ -162,8 +162,6 @@ const getErrandDetail = (errandIdx) => {
                 where: {errandIdx: errandIdx},
                 attributes: ['errandStatus', 'executorIdx']
             });
-
-            console.log(statusChk.dataValues.executorIdx);
             let result = null;
             if (statusChk.dataValues.errandStatus === '취소완료' && statusChk.dataValues.executorIdx) {
                 result = await Errands.findOne({
@@ -231,13 +229,11 @@ async function requestCancelErrand(req, res, next) {
         const userIdx = token.userIdx;
         const errandIdx = req.params.errandIdx;
         let reason = req.body.cancelReason || null;
-        const result = await registerCancelContent(userIdx, errandIdx, reason);
+        const targetUserIdx = await registerCancelContent(userIdx, errandIdx, reason);
         if (reason) {
-            await fcmRequestCancel(errandIdx, userIdx, reason);
+            await fcmRequestCancel(errandIdx, targetUserIdx);
         }
-        if (result[0] === 1) {
-            res.send({msg: 'success'});
-        }
+        resSucc(res, null)
     } catch (err) {
         next(err);
     }
@@ -261,9 +257,8 @@ const registerCancelContent = (userIdx, errandIdx, reason) => {
                 targetUserIdx = requesterIdx;
             }
 
-            let changeStatus = null;
             if (!targetUserIdx) {
-                changeStatus = await Errands.update(
+                await Errands.update(
                     {errandStatus: "취소완료"},
                     {where: {errandIdx: errandIdx}});
             } else {
@@ -271,12 +266,12 @@ const registerCancelContent = (userIdx, errandIdx, reason) => {
                     throw new Error('cancelReason not exist');
                 }
                 await Cancel.create({errandIdx: errandIdx, targetUserIdx: targetUserIdx, cancelReason: reason});
-                changeStatus = await Errands.update(
+                await Errands.update(
                     {errandStatus: "취소완료"},
                     // {errandStatus: "취소요청중"},
                     {where: {errandIdx: errandIdx}});
             }
-            resolve(changeStatus);
+            resolve(targetUserIdx);
         } catch (err) {
             reject(err);
         }
@@ -284,26 +279,16 @@ const registerCancelContent = (userIdx, errandIdx, reason) => {
 };
 
 /* 4_2 취소 통보 FCM */
-const fcmRequestCancel = (errandIdx, userIdx, reason) => {
+const fcmRequestCancel = (errandIdx, userIdx) => {
     return new Promise(async (resolve, reject) => {
         try {
             const userFcmToken = await getFcmToken(userIdx);
-            console.log("userFcmToken : " + userFcmToken);
-            const errandResult = await Errands.findById(errandIdx, {attributes: ['errandStatus', 'errandTitle']});
-            const userResult = await Users.findById(userIdx, {attributes: ['errandStatus']});
-            console.log("errandStatus ; " + errandResult.dataValues.errandStatus);
-            console.log("errandStatus ; " + userResult.dataValues.userNickName);
             const message = {
                 to: userFcmToken, // 상대방 유저 토큰
                 data: {
                     pushType: '심부름 취소 요청',
-                    cancelReason: reason,
-                    errandStatus: errandResult.dataValues.errandStatus
+                    errandIdx: errandIdx
                 }
-                // notification: {
-                //     title: '심부름 취소',
-                //     body: userResult.dataValues.userNickName + '님이 [' + errandResult.dataValues.errandTitle + '] 심부름 취소 통보를 하셨습니다'
-                // }
             };
             sendFcmMessage(message);
             resolve();
