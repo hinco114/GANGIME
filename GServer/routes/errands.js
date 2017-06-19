@@ -393,11 +393,12 @@ const fcmAskExecute = (errandIdx, userIdx) => {
                     errandTitle: errandResult.dataValues.errandTitle,
                     userNickname: errandResult.dataValues.userNickname,
                     userEmail: errandResult.dataValues.userEmail
-                },
-                notification: {
-                    title: '심부름 수행 요청',
-                    body: userResult.dataValues.userNickname + '님이 [' + errandResult.dataValues.errandTitle + '] 심부름 수행 요청을 하셨습니다'
                 }
+                // },
+                // notification: {
+                //     title: '심부름 수행 요청',
+                //     body: userResult.dataValues.userNickname + '님이 [' + errandResult.dataValues.errandTitle + '] 심부름 수행 요청을 하셨습니다'
+                // }
             };
             sendFcmMessage(message);
             resolve();
