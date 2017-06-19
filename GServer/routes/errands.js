@@ -230,6 +230,7 @@ async function requestCancelErrand(req, res, next) {
         const errandIdx = req.params.errandIdx;
         let reason = req.body.cancelReason || null;
         const targetUserIdx = await registerCancelContent(userIdx, errandIdx, reason);
+        console.log('targeUserIdx : ', targetUserIdx);
         if (reason) {
             await fcmRequestCancel(errandIdx, targetUserIdx);
         }
@@ -284,7 +285,7 @@ const fcmRequestCancel = (errandIdx, userIdx) => {
         try {
             const userFcmToken = await getFcmToken(userIdx);
             const message = {
-                to: userFcmToken, // 상대방 유저 토큰
+                to: userFcmToken.fcmToken, // 상대방 유저 토큰
                 data: {
                     pushType: '심부름 취소 요청',
                     errandIdx: errandIdx
