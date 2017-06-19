@@ -202,7 +202,7 @@ function initCancel() {
                         .on('end_parsed', (cancels) => {
                             models.CANCEL_TB.bulkCreate(cancels, {logging:false})
                                 .catch(err => {
-                                    console.log('This is err : ', err);
+                                    //console.log('This is err : ', err);
                                     reject(err);
                                 });
                             console.log('Cancel Data init Complete');
