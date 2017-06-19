@@ -281,11 +281,16 @@ async function delFavoriteStation(req, res, next) {
 
 async function newProfilePic(req, res, next) {
     try {
-        //TODO: (SH) If Image URL already exist on User's DB, It should be delete.
         const decode = await tokenVerify(req.headers);
         const fileInfo = req.file;
         if (!fileInfo) {
-            throw new Error('File Error')
+            throw new Error('File not attached')
+        }
+        const checkExist = await Users.findById(decode.userIdx, {attributes: ['profilePicture']});
+        if (checkExist.dataValues.profilePicture != '') {
+            const tempStr = checkExist.profilePicture.split('/');
+            const key = tempStr[tempStr.length - 1];
+            await deleteFromS3(key)
         }
         // Get a new FileName
         const fileName = getItemKey(fileInfo.originalname);
@@ -402,13 +407,44 @@ const uploadToS3 = (itemKey, readStream, mimetype) => {
                     reject(err);
                 }
                 // If upload is successful, get a url and return
-                var imageUrl = s3.endpoint.href + bucketName + '/' + slicedKey;
+                const imageUrl = s3.endpoint.href + bucketName + '/' + slicedKey;
                 resolve(imageUrl);
             });
         } catch (err) {
             console.log('ERR OCCURED : ', err);
         }
     });
+};
+
+const deleteFromS3 = (key) => {
+    return new Promise((resolve, reject) => {
+        const bucketName = s3Config.bucketName;
+        // Params setting
+        var params = {
+            Bucket: bucketName,
+            Delete: {
+                Objects: [
+                    {
+                        Key: 'profiles/' + key
+                    },
+                    {
+                        Key: 'thumbnails/' + key
+                    }
+                ],
+                Quiet: false
+            }
+        };
+        AWS.config.region = s3Config.region;
+        AWS.config.accessKeyId = s3Config.accessKeyId;
+        AWS.config.secretAccessKey = s3Config.secretAccessKey;
+        const s3 = new AWS.S3();
+        s3.deleteObjects(params, (err, data) => {
+            if (err) {
+                reject(err);
+            }
+            resolve(data);
+        })
+    })
 };
 
 const getItemKey = (originName) => {
@@ -483,7 +519,7 @@ const findBoxeErrands = (startIdx, endIdx, userIdx) => {
                     model: Errands, attributes: ['errandTitle', 'startStationIdx', 'arrivalStationIdx',
                         [Errands.sequelize.fn('date_format', Errands.sequelize.col('deadlineDt'), '%m-%d %H:%i'), 'deadlineDt'],
                         'errandStatus', 'errandPrice', 'itemPrice']
-        }]
+                }]
             });
 
             await result.forEach(result => {
