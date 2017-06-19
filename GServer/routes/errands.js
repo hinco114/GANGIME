@@ -288,8 +288,8 @@ const fcmRequestCancel = (errandIdx, userIdx, reason) => {
     return new Promise(async (resolve, reject) => {
         try {
             const userFcmToken = await getFcmToken(userIdx);
-            const errandResult = await findById(errandIdx, {attributes: ['errandStatus', 'errandTitle']});
-            const userResult = await findById(userIdx, {attributes: ['errandStatus']});
+            const errandResult = await Errands.findById(errandIdx, {attributes: ['errandStatus', 'errandTitle']});
+            const userResult = await Users.findById(userIdx, {attributes: ['errandStatus']});
             console.log("errandStatus ; " + errandResult.dataValues.errandStatus);
             console.log("errandStatus ; " + userResult.dataValues.userNickName);
             const message = {
