@@ -66,7 +66,7 @@ app.use((err, req, res, next) => {
                         {
                             'color': 'danger',
                             'pretext': 'Error has benn occuerd',
-                            'title': req.url,
+                            'title': req.method + ' ' + req.url,
                             'text': err.message,
                             'footer': 'From_AWS',
                             'footer_icon': 'https://platform.slack-edge.com/img/default_application_icon.png',
