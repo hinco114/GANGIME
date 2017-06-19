@@ -232,11 +232,11 @@ async function requestCancelErrand(req, res, next) {
         const errandIdx = req.params.errandIdx;
         let reason = req.body.cancelReason || null;
         const result = await registerCancelContent(userIdx, errandIdx, reason);
-        if (result[0] === 1) {
-            res.send({msg: 'success'});
-        }
         if (reason) {
             await fcmRequestCancel(errandIdx, userIdx, reason);
+        }
+        if (result[0] === 1) {
+            res.send({msg: 'success'});
         }
     } catch (err) {
         next(err);
@@ -299,7 +299,7 @@ const fcmRequestCancel = (errandIdx, userIdx, reason) => {
                     pushType: '심부름 취소 요청',
                     cancelReason: reason,
                     errandStatus: errandResult.dataValues.errandStatus
-                },
+                }
                 // notification: {
                 //     title: '심부름 취소',
                 //     body: userResult.dataValues.userNickName + '님이 [' + errandResult.dataValues.errandTitle + '] 심부름 취소 통보를 하셨습니다'
@@ -471,9 +471,7 @@ async function acceptErrand(req, res, next) {
 async function rejectErrandRequest(req, res, next) {
     try {
         const token = await tokenVerify(req.headers);
-        const userIdx = token.userIdx;
         const errandIdx = req.params.errandIdx;
-        // const chkStatus = await Errands.findById(errandIdx, {attributes: ['errandStatus']});
         const errandResult = await Errands.findById(errandIdx);
         if (errandResult.dataValues.errandStatus === '매칭대기중') {
             throw new Error('Time already gone');
@@ -491,6 +489,7 @@ async function rejectErrandRequest(req, res, next) {
                 errandContent: errandResult.dataValues.content,
                 startStationIdx: errandResult.dataValues.startStationIdx,
                 arrivalStationIdx: errandResult.dataValues.arrivalStationIdx,
+                deadlineDt: errandResult.dataValues.deadlineDt,
                 itemPrice: errandResult.dataValues.itemPrice,
                 errandPrice: errandResult.dataValues.errandPrice
             }
