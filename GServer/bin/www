@@ -213,6 +213,29 @@ function initCancel() {
     })
 }
 
+function initStar() {
+    return new Promise((resolve, reject) => {
+        models.STARS_TB.findAndCountAll({logging: false})
+            .then(result => {
+                if(result.count === 0){
+                    const csv = require('csvtojson');
+                    const csvFilePath = __dirname + '/../config/stars_data.csv';
+                    csv()
+                        .fromFile(csvFilePath)
+                        .on('end_parsed', (stars) => {
+                            models.STARS_TB.bulkCreate(stars, {logging:false})
+                                .catch(err => {
+                                    console.log('This is err : ', err);
+                                    reject(err);
+                                });
+                            console.log('Stars Data init Complete');
+                            resolve();
+                        })
+                }
+            })
+    })
+}
+
 // sync with Initializing Dummy Datas
 models.sequelize.sync().then(async () => {
     server.listen(port);
@@ -225,6 +248,7 @@ models.sequelize.sync().then(async () => {
         await initStation();
         await initErrand();
         await initCancel();
+        await initStar();
     } catch (err) {
         console.log(err.message);
     }
