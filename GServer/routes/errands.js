@@ -371,13 +371,26 @@ async function askExecuteErrand(req, res, next) {
 const fcmAskExecute = (errandIdx, userIdx) => {
     return new Promise(async (resolve, reject) => {
         try {
-            const userFcmToken = await getFcmToken(userIdx);
+            const targetResult = await Errands.findById(errandIdx, {attributes: ['requesterIdx', 'executorIdx']});
+            const requesterIdx = targetResult.dataValues.requesterIdx;
+            const executorIdx = targetResult.dataValues.executorIdx;
+            let targetUser = null;
+            if (requesterIdx === userIdx) {
+                targetUser = executorIdx;
+            } else if (executorIdx === userIdx) {
+                targetUser = requesterIdx;
+            }
+            console.log('상대방 : ' + targetUser);
+
+            const userFcmToken = await getFcmToken(targetUser);
             const errandResult = await Errands.findById(errandIdx, {attributes: ['errandStatus', 'errandTitle']});
-            const userResult = await Users.findById(userIdx, {attributes: ['userNickName']});
+            const userResult = await Users.findById(userIdx, {attributes: ['userNickName', 'userEmail']});
             const message = {
                 to: userFcmToken.dataValues.fcmToken, // 상대방 유저 토큰
                 data: {
-                    errandStatus: errandResult.dataValues.errandStatus
+                    errandStatus: errandResult.dataValues.errandStatus,
+                    errandTitle: errandResult.dataValues.errandTitle,
+                    userEmail: errandResult.dataValues.userEmail
                 },
                 notification: {
                     title: '심부름 수행 요청',
