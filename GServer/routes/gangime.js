@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const jwtConfig = require('../config/config.json')['jwt'];
 const Users = require('../models').USERS_TB;
 const FCM = require('fcm-push');
-const serverKey = 'AAAATGin3ow:APA91bEmWLpOsTrPImJzNtjlDdEZBqMQZxM_6F-wzdrepqqIxyWDZK9GqT20sKU74L069Bc3VeVsSrnjU-xXVjDuUq8EP6_QPvx_IYh7bsF5dKTY1xhNRZmh31iIW9kgY_QvTbwd-K-r';
+const serverKey = require('../config/config.json')['fcm'].serverKey;
 const fcm = new FCM(serverKey);
 
 const resSucc = (res, data) => {
@@ -20,7 +20,7 @@ const resSucc = (res, data) => {
         delete data.end;
     }
 
-    if (typeof data.start !== 'undefined') {
+    if (data && typeof data.start !== 'undefined') {
         resultModel.total = data.length;
         let compareNum = (data.end > data.length)? data.length : data.end;
         resultModel.index = {
