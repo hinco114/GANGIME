@@ -384,18 +384,19 @@ const fcmAskExecute = (errandIdx, userIdx) => {
 
             const userFcmToken = await getFcmToken(targetUser);
             const errandResult = await Errands.findById(errandIdx, {attributes: ['errandStatus', 'errandTitle', 'errandIdx']});
-            const userResult = await Users.findById(userIdx, {attributes: ['userNickName', 'userEmail']});
+            const userResult = await Users.findById(userIdx, {attributes: ['userNickname', 'userEmail']});
             const message = {
                 to: userFcmToken.dataValues.fcmToken, // 상대방 유저 토큰
                 data: {
                     errandIdx: errandResult.dataValues.errandIdx,
                     errandStatus: errandResult.dataValues.errandStatus,
                     errandTitle: errandResult.dataValues.errandTitle,
+                    userNickname: errandResult.dataValues.userNickname,
                     userEmail: errandResult.dataValues.userEmail
                 },
                 notification: {
                     title: '심부름 수행 요청',
-                    body: userResult.dataValues.userNickName + '님이 [' + errandResult.dataValues.errandTitle + '] 심부름 수행 요청을 하셨습니다'
+                    body: userResult.dataValues.userNickname + '님이 [' + errandResult.dataValues.errandTitle + '] 심부름 수행 요청을 하셨습니다'
                 }
             };
             sendFcmMessage(message);
