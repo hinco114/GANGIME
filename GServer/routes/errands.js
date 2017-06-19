@@ -296,13 +296,14 @@ const fcmRequestCancel = (errandIdx, userIdx, reason) => {
             const message = {
                 to: userFcmToken, // 상대방 유저 토큰
                 data: {
+                    pushType: '심부름 취소 요청',
                     cancelReason: reason,
                     errandStatus: errandResult.dataValues.errandStatus
                 },
-                notification: {
-                    title: '심부름 취소',
-                    body: userResult.dataValues.userNickName + '님이 [' + errandResult.dataValues.errandTitle + '] 심부름 취소 통보를 하셨습니다'
-                }
+                // notification: {
+                //     title: '심부름 취소',
+                //     body: userResult.dataValues.userNickName + '님이 [' + errandResult.dataValues.errandTitle + '] 심부름 취소 통보를 하셨습니다'
+                // }
             };
             sendFcmMessage(message);
             resolve();
@@ -388,6 +389,7 @@ const fcmAskExecute = (errandIdx, userIdx) => {
             const message = {
                 to: userFcmToken.dataValues.fcmToken, // 상대방 유저 토큰
                 data: {
+                    pushType: '심부름 수행 요청',
                     errandIdx: errandResult.dataValues.errandIdx,
                     errandStatus: errandResult.dataValues.errandStatus,
                     errandTitle: errandResult.dataValues.errandTitle,
@@ -482,6 +484,7 @@ async function rejectErrandRequest(req, res, next) {
         const message = {
             to: userFcmToken.dataValues.fcmToken, // 상대방 유저 토큰
             data: {
+                pushType: '심부름 요청 거절',
                 errandIdx: errandResult.dataValues.errandIdx,
                 errandStatus: errandResult.dataValues.errandStatus,
                 errandTitle: errandResult.dataValues.errandTitle,
