@@ -63,12 +63,11 @@ async function createToken(userIdx, userNickname) {
     }
 }
 
-async function getFcmToken(userIdx){
+const getFcmToken = (userIdx) => {
     return Users.findById(userIdx, {attributes: ['fcmToken']});
-}
+};
 
 const sendFcmMessage = (message) => {
-    console.log("fcm 실행은 됨");
     fcm.send(message)
         .then(function(response){ // promise 방식
             console.log("Successfully sent with response: ", response);

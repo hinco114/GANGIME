@@ -283,7 +283,7 @@ const registerCancelContent = (userIdx, errandIdx, reason) => {
     })
 };
 
-/* 4_2 FCM */
+/* 4_2 취소 통보 FCM */
 const fcmRequestCancel = (errandIdx, userIdx, reason) => {
     return new Promise(async (resolve, reject) => {
         try {
@@ -361,10 +361,39 @@ async function askExecuteErrand(req, res, next) {
         if (result[0] === 1) {
             res.send({msg: 'success'});
         }
+        await fcmAskExecute(errandIdx, userIdx);
     } catch (err) {
         next(err);
     }
 }
+
+/* 6_1 심부름 수행 FCM */
+const fcmAskExecute = (errandIdx, userIdx) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const userFcmToken = await getFcmToken(userIdx);
+            console.log(userFcmToken.dataValues.fcmToken);
+            const errandResult = await Errands.findById(errandIdx, {attributes: ['errandStatus', 'errandTitle']});
+            const userResult = await Users.findById(userIdx, {attributes: ['userNickName']});
+            console.log(errandResult.dataValues.errandStatus);
+            console.log(userResult.dataValues.userNickName);
+            const message = {
+                to: userFcmToken.dataValues.fcmToken, // 상대방 유저 토큰
+                data: {
+                    errandStatus: errandResult.dataValues.errandStatus
+                },
+                notification: {
+                    title: '심부름 수행 요청',
+                    body: userResult.dataValues.userNickName + '님이 [' + errandResult.dataValues.errandTitle + '] 심부름 수행 요청을 하셨습니다'
+                }
+            };
+            sendFcmMessage(message);
+            resolve();
+        } catch (err) {
+            reject(err);
+        }
+    });
+};
 
 /* 6_1 해당 심부름에 신청 작업 진행 */
 const askToRequester = (userIdx, errandIdx) => {
@@ -372,10 +401,8 @@ const askToRequester = (userIdx, errandIdx) => {
         try {
             const startTime = new Date(Date.now());
             const endTime = new Date(startTime.getTime() + 10000); // TODO: (DH) 시간 변경하기, 현재는 테스트 시간으로 설정함
-            console.log("시작 : " + startTime);
-            console.log("끝 : " + endTime);
             const settings = {start: startTime, end: endTime};
-            await countFiveMinutes(settings, errandIdx);
+            // await countFiveMinutes(settings, errandIdx);
 
             const askExecuting = await Errands.update(
                 {errandStatus: '신청진행중', executorIdx: userIdx},
