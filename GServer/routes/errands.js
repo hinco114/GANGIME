@@ -230,9 +230,8 @@ async function requestCancelErrand(req, res, next) {
         const errandIdx = req.params.errandIdx;
         let reason = req.body.cancelReason || null;
         const targetUserIdx = await registerCancelContent(userIdx, errandIdx, reason);
-        console.log('targeUserIdx : ', targetUserIdx);
         if (reason) {
-            await fcmRequestCancel(errandIdx, targetUserIdx);
+            await fcmRequestCancel(errandIdx, targetUserIdx, userIdx);
         }
         resSucc(res, null)
     } catch (err) {
@@ -280,15 +279,18 @@ const registerCancelContent = (userIdx, errandIdx, reason) => {
 };
 
 /* 4_2 취소 통보 FCM */
-const fcmRequestCancel = (errandIdx, userIdx) => {
+const fcmRequestCancel = (errandIdx, targetUserIdx, userIdx) => {
     return new Promise(async (resolve, reject) => {
         try {
             const userFcmToken = await getFcmToken(userIdx);
+            const errand = await Errands.findById(errandIdx);
             const message = {
                 to: userFcmToken.fcmToken, // 상대방 유저 토큰
                 data: {
                     pushType: '심부름 취소 요청',
-                    errandIdx: errandIdx
+                    errandIdx: errandIdx,
+                    userIdx: userIdx,
+                    errandStatus: errand.errandStatus
                 }
             };
             sendFcmMessage(message);
@@ -340,6 +342,7 @@ const addStars = (userIdx, errandIdx, point) => {
 
 /* 6. 심부름 수행 요청 */
 async function askExecuteErrand(req, res, next) {
+    // TODO: (SH) 중복 요청에 대한 처리 만들기
     try {
         const token = await tokenVerify(req.headers);
         const userIdx = token.userIdx;
@@ -367,7 +370,6 @@ const fcmAskExecute = (errandIdx, userIdx) => {
             } else if (executorIdx === userIdx) {
                 targetUser = requesterIdx;
             }
-            console.log('상대방 : ' + targetUser);
 
             const userFcmToken = await getFcmToken(targetUser);
             const errandResult = await Errands.findById(errandIdx, {attributes: ['errandStatus', 'errandTitle', 'errandIdx']});
@@ -382,11 +384,6 @@ const fcmAskExecute = (errandIdx, userIdx) => {
                     userNickname: errandResult.dataValues.userNickname,
                     userEmail: errandResult.dataValues.userEmail
                 }
-                // },
-                // notification: {
-                //     title: '심부름 수행 요청',
-                //     body: userResult.dataValues.userNickname + '님이 [' + errandResult.dataValues.errandTitle + '] 심부름 수행 요청을 하셨습니다'
-                // }
             };
             sendFcmMessage(message);
             resolve();
@@ -443,9 +440,9 @@ async function acceptErrand(req, res, next) {
             executorIdx: result.dataValues.executorIdx,
             requesterIdx: result.dataValues.requesterIdx,
         };
-        const newChat = await errandChats.create(creation);
+        // const newChat = await errandChats.create(creation);
         result.errandStatus = '진행중';
-        result.errandChatId = newChat._id.toString();
+        // result.errandChatId = newChat._id.toString();
         result.save();
         resSucc(res, result);
     } catch (err) {
