@@ -1,6 +1,9 @@
 const jwt = require('jsonwebtoken');
 const jwtConfig = require('../config/config.json')['jwt'];
 const Users = require('../models').USERS_TB;
+const FCM = require('fcm-push');
+const serverKey = 'AAAATGin3ow:APA91bEmWLpOsTrPImJzNtjlDdEZBqMQZxM_6F-wzdrepqqIxyWDZK9GqT20sKU74L069Bc3VeVsSrnjU-xXVjDuUq8EP6_QPvx_IYh7bsF5dKTY1xhNRZmh31iIW9kgY_QvTbwd-K-r';
+const fcm = new FCM(serverKey);
 
 const resSucc = (res, data) => {
     let resultModel = {
@@ -60,6 +63,23 @@ async function createToken(userIdx, userNickname) {
     }
 }
 
+async function getFcmToken(userIdx){
+    return Users.findById(userIdx, {attributes: ['fcmToken']});
+}
+
+const sendFcmMessage = (message) => {
+    fcm.send(message)
+        .then(function(response){ // promise 방식
+            console.log("Successfully sent with response: ", response);
+        })
+        .catch(function(err){
+            console.log("Something has gone wrong!");
+            console.error(err);
+        });
+};
+
 module.exports.resSucc = resSucc;
 module.exports.tokenVerify = tokenVerify;
 module.exports.createToken = createToken;
+module.exports.getFcmToken = getFcmToken;
+module.exports.sendFcmMessage = sendFcmMessage;

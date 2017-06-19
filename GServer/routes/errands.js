@@ -3,6 +3,8 @@ const router = express.Router();
 const schedule = require('node-schedule');
 const resSucc = require('./gangime').resSucc;
 const tokenVerify = require('./gangime').tokenVerify;
+const getFcmToken = require('./gangime').getFcmToken;
+const sendFcmMessage = require('./gangime').sendFcmMessage;
 const Errands = require('../models/').ERRANDS_TB;
 const Cancel = require('../models/').CANCEL_TB;
 const Stars = require('../models/').STARS_TB;
@@ -10,6 +12,7 @@ const Boxes = require('../models/').BOXES_TB;
 const Users = require('../models/').USERS_TB;
 const Stations = require('../models/').STATIONS_TB;
 const errandChats = require('../models/').errandChats;
+let deadlineChk = {};
 
 router.route('/')
     .post(registerErrand)
@@ -39,6 +42,7 @@ async function registerErrand(req, res, next) {
         const userIdx = token.userIdx;
         const result = await createErrand(body, userIdx);
         resSucc(res, result);
+        await saveDeadlineDt(body.deadlineDt, result.dataValues.errandIdx);
     } catch (err) {
         next(err);
     }
@@ -68,7 +72,58 @@ const createErrand = (body, userIdx) => {
     });
 };
 
-/* 1_2 지하철역 간의 거리 구하기 */
+/*1_2 스케줄러 실행을 위한 데이터 저장 */
+const saveDeadlineDt = (deadlineDt, errandIdx) => {
+    return new Promise((resolve, reject) => {
+        try {
+            const deadline = deadlineDt.slice(0, 16);
+            if (deadlineChk[deadline]) {
+                deadlineChk[deadline].push(errandIdx);
+            } else {
+                deadlineChk[deadline] = [errandIdx];
+            }
+            // everyFiveCheck();
+            resolve();
+        } catch (err) {
+            reject(err);
+        }
+    });
+};
+
+// /* 5분마다 실행되는 스케줄러 */
+// const everyFiveCheck = () => {
+//     const everyTimer = schedule.scheduleJob(' */1 * * * *', async () => {
+//         const currentTime = formatDate();
+//         console.log('현재시간 : ' + currentTime);
+//         if (deadlineChk[currentTime]) { // 현재 시간과 마감시간이 동일한게 존재하면 작업 시작
+//             await deadlineChk[currentTime].forEach(async (errandIdx) => {
+//                 const statusChk = await Errands.findById(errandIdx, {attributes: ['errandStatus']});
+//                 if (statusChk.dataValues.errandStatus === '매칭대기중') {
+//                     statusChk.errandStatus = '매칭실패';
+//                     statusChk.save();
+//                 }
+//                 delete deadlineChk[currentTime];
+//             });
+//         }
+//     })
+// };
+//
+// /* Date 포맷 */
+// const formatDate = () => {
+//     let d = new Date(Date.now()),
+//         month = '' + (d.getMonth() + 1),
+//         day = '' + d.getDate(),
+//         year = d.getFullYear(),
+//         hour = d.getHours(),
+//         minute = '' + d.getMinutes();
+//
+//     if (month.length < 2) month = '0' + month;
+//     if (day.length < 2) day = '0' + day;
+//     if(minute.length < 2) minute = '0' + minute;
+//     return [year, month, day].join('-') + ' ' + [hour, minute].join(':');
+// };
+
+/* 1_3 지하철역 간의 거리 구하기 */
 const getDistance = (s_lat, s_lon, a_lat, a_lon) => {
     return Stations.findOne({
         attributes: [[
@@ -180,6 +235,9 @@ async function requestCancelErrand(req, res, next) {
         if (result[0] === 1) {
             res.send({msg: 'success'});
         }
+        if(reason){
+            await fcmRequestCancel(errandIdx, userIdx, reason);
+        }
     } catch (err) {
         next(err);
     }
@@ -223,6 +281,30 @@ const registerCancelContent = (userIdx, errandIdx, reason) => {
             reject(err);
         }
     })
+};
+
+
+/* 4_2 FCM */
+const fcmRequestCancel = (uerrandIdx, serIdx, reason) => {
+    return new Promise(async (resolve, reject) => {
+        const userFcmToken = await getFcmToken(userIdx);
+        const errandResult = await findById(errandIdx, {attributes: ['errandStatus', 'errandTitle']});
+        const userResult = await findById(userIdx, {attributes: ['errandStatus']});
+        console.log("errandStatus ; " + errandResult.dataValues.errandStatus);
+        console.log("errandStatus ; " + userResult.dataValues.userNickName);
+        const message = {
+            to : userFcmToken, // 상대방 유저 토큰
+            data : {
+                cancelReason: reason,
+                errandStatus: errandResult.dataValues.errandStatus
+            },
+            notification: {
+                title: '심부름 취소',
+                body: userResult.dataValues.userNickName + '님이 [' + errandResult.dataValues.errandTitle + '] 심부름 취소 통보를 하셨습니다'
+            }
+        };
+        sendFcmMessage(message);
+    });
 };
 
 /* 5. 심부름 평가하기  */
@@ -316,7 +398,7 @@ const countFiveMinutes = (settings, errandIdx) => {
         }
         // TODO : 5분 체크 후에 push해서는 심부름 요청에 대한 결과 보내주기
     });
-}
+};
 
 /* 7. 심부름 요청 승낙 */
 async function acceptErrand(req, res, next) {
