@@ -372,19 +372,17 @@ const fcmAskExecute = (errandIdx, userIdx) => {
     return new Promise(async (resolve, reject) => {
         try {
             const userFcmToken = await getFcmToken(userIdx);
-            console.log(userFcmToken.dataValues.fcmToken);
             const errandResult = await Errands.findById(errandIdx, {attributes: ['errandStatus', 'errandTitle']});
             const userResult = await Users.findById(userIdx, {attributes: ['userNickName']});
-            console.log(errandResult.dataValues.errandStatus);
-            console.log(userResult.dataValues.userNickName);
             const message = {
-                to: userFcmToken.dataValues.fcmToken, // 상대방 유저 토큰
-                data: {
-                    errandStatus: errandResult.dataValues.errandStatus
-                },
+                to: 'fvUj0aeIB2g:APA91bGsbzPJo0RXNhEEvYhRHGJm3d7ll3sU1hEMBuWD27TCC2rv4xMxN3kJYdr_MbiDo7hVcwE3_4qaQQFLPe3-NyGollu3Mc5hXccdWZeDsH7YAd7NWOTnIgvyg0kkfdSTmybJ2Opt', // 상대방 유저 토큰
+                // data: {
+                //     errandStatus: errandResult.dataValues.errandStatus
+                // },
                 notification: {
                     title: '심부름 수행 요청',
-                    body: userResult.dataValues.userNickName + '님이 [' + errandResult.dataValues.errandTitle + '] 심부름 수행 요청을 하셨습니다'
+                    body: '테스트'
+                    // body: userResult.dataValues.userNickName + '님이 [' + errandResult.dataValues.errandTitle + '] 심부름 수행 요청을 하셨습니다'
                 }
             };
             sendFcmMessage(message);
