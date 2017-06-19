@@ -474,13 +474,13 @@ async function rejectErrandRequest(req, res, next) {
         const userIdx = token.userIdx;
         const errandIdx = req.params.errandIdx;
         // const chkStatus = await Errands.findById(errandIdx, {attributes: ['errandStatus']});
-        const chkStatus = await checkErrandStatus(errandIdx);
-        if (chkStatus.dataValues.errandStatus === '매칭대기중') {
+        const errandResult = await Errands.findById(errandIdx);
+        if (errandResult.dataValues.errandStatus === '매칭대기중') {
             throw new Error('Time already gone');
         }
 
-        const result = await rejectRequester(userIdx, errandIdx);
-        const userFcmToken = await getFcmToken(userIdx);
+        const result = await rejectRequester(errandIdx);
+        const userFcmToken = await getFcmToken(errandResult.executorIdx);
         const message = {
             to: userFcmToken.dataValues.fcmToken, // 상대방 유저 토큰
             data: {
@@ -505,10 +505,10 @@ async function rejectErrandRequest(req, res, next) {
 }
 
 /* 8_1 요청이 들어온 심부름 거절하기 */
-const rejectRequester = (userIdx, errandIdx) => {
+const rejectRequester = (errandIdx) => {
     return Errands.update(
         {executorIdx: null, errandStatus: '매칭대기중'},
-        {where: {errandIdx: errandIdx, requesterIdx: userIdx, errandStatus: '신청진행중'}});
+        {where: {errandIdx: errandIdx}});
 };
 
 /* 9. 지하철역에 따른 심부름 목록 불러오기*/

@@ -74,7 +74,7 @@ const sendFcmMessage = (message) => {
         })
         .catch(function(err){
             console.log("Something has gone wrong!");
-            console.error(err);
+            throw err;
         });
 };
 
