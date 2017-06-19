@@ -142,6 +142,8 @@ function initErrand() {
                                     return station.stationName === errand.arrivalStationIdx
                                 });
                                 errand.arrivalStationIdx = idx.stationIdx;
+                                errand.requesterIdx = errand.requesterIdx ? parseInt(errand.requesterIdx) : null;
+                                errand.executorIdx = errand.executorIdx ? parseInt(errand.executorIdx) : null;
                             });
                             models.ERRANDS_TB.bulkCreate(errands, {logging: false})
                                 .then(() => {
