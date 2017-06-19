@@ -20,7 +20,7 @@ const resSucc = (res, data) => {
         delete data.end;
     }
 
-    if (data && data.start) {
+    if (data && typeof data.start !== 'undefined') {
         resultModel.total = data.length;
         let compareNum = (data.end > data.length)? data.length : data.end;
         resultModel.index = {
