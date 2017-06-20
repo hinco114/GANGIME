@@ -352,8 +352,8 @@ async function askExecuteErrand(req, res, next) {
         const errandIdx = req.params.errandIdx;
         const result = await askToRequester(userIdx, errandIdx);
         const ret = {errandStatus: result.errandStatus};
-        resSucc(res, ret);
         await fcmAskExecute(errandIdx, userIdx);
+        resSucc(res, ret);
     } catch (err) {
         next(err);
     }
