@@ -604,62 +604,62 @@ async function showHistories(req, res, next) {
 }
 
 /* 5_1 수행 또는 요청 심부름 내역 가져오기 */
+// const getAllHistories = (userIdx, startIdx, category) => {
+//     return new Promise(async (resolve, reject) => {
+//         try {
+//             let inCond;
+//             if (category == 'execute') {
+//                 inCond = ['신청진행중', '진행중', '취소완료', '완료요청중', '심부름완료'];
+//             } else if (category == 'request') {
+//                 inCond = ['입금대기중', '매칭대기중', '진행중', '매칭실패', '취소완료', '완료요청중', '심부름완료'];
+//             }
+//             const condtitions = {
+//                 where: {
+//                     in: inCond
+//                 }
+//             }
+//         }
+//         const result = Errands.let
+//         // TODO : (DH) 가능하면 raw query 사용하지 않기
+//         const result = await Errands.sequelize.query("SELECT errandIdx, errandTitle, errandContent, startStationIdx, arrivalStationIdx," +
+//             "date_format(deadlineDt, '%m.%d') AS `deadlineDt`, itemPrice, errandPrice, errandStatus " +
+//             "FROM ERRANDS_TB WHERE " + inputQuery + " ORDER BY updatedAt DESC LIMIT 20 OFFSET " + startIdx).spread((result, metadata) => {
+//             result.start = startIdx;
+//             result.end = startIdx + 20;
+//             resolve(result);
+//         });
+//     }
+//     catch
+//     (err)
+//     {
+//         reject(err);
+//     }
+// }
+// )
+// ;
 const getAllHistories = (userIdx, startIdx, category) => {
     return new Promise(async (resolve, reject) => {
         try {
-            let inCond;
-            if (category == 'execute') {
-                inCond = ['신청진행중', '진행중', '취소완료', '완료요청중', '심부름완료'];
-            } else if (category == 'request') {
-                inCond = ['입금대기중', '매칭대기중', '진행중', '매칭실패', '취소완료', '완료요청중', '심부름완료'];
+            let inputQuery = null;
+            if (category === "execute") { // 수행자
+                inputQuery = "errandStatus IN ('신청진행중', '진행중', '취소완료', '완료요청중', '심부름완료') AND executorIdx = " + userIdx;
+            } else if (category === "request") { // 요청자
+                inputQuery = "errandStatus IN ('입금대기중', '매칭대기중', '진행중', '매칭실패', '취소완료', '완료요청중', '심부름완료') AND requesterIdx = " + userIdx;
             }
-            const condtitions = {
-                where: {
-                    in: inCond
-                }
-            }
-        }
-        const result = Errands.let
-        // TODO : (DH) 가능하면 raw query 사용하지 않기
-        const result = await Errands.sequelize.query("SELECT errandIdx, errandTitle, errandContent, startStationIdx, arrivalStationIdx," +
-            "date_format(deadlineDt, '%m.%d') AS `deadlineDt`, itemPrice, errandPrice, errandStatus " +
-            "FROM ERRANDS_TB WHERE " + inputQuery + " ORDER BY updatedAt DESC LIMIT 20 OFFSET " + startIdx).spread((result, metadata) => {
-            result.start = startIdx;
-            result.end = startIdx + 20;
-            resolve(result);
-        });
-    }
-    catch
-    (err)
-    {
-        reject(err);
-    }
-}
-)
-;
-/*const getAllHistories = (userIdx, startIdx, category) => {
- return new Promise(async (resolve, reject) => {
- try {
- let inputQuery = null;
- if (category === "execute") { // 수행자
- inputQuery = "errandStatus IN ('신청진행중', '진행중', '취소완료', '완료요청중', '심부름완료') AND executorIdx = " + userIdx;
- } else if (category === "request") { // 요청자
- inputQuery = "errandStatus IN ('입금대기중', '매칭대기중', '진행중', '매칭실패', '취소완료', '완료요청중', '심부름완료') AND requesterIdx = " + userIdx;
- }
 
- // TODO : (DH) 가능하면 raw query 사용하지 않기
- const result = await Errands.sequelize.query("SELECT errandIdx, errandTitle, errandContent, startStationIdx, arrivalStationIdx," +
- "date_format(deadlineDt, '%m.%d') AS `deadlineDt`, itemPrice, errandPrice, errandStatus " +
- "FROM ERRANDS_TB WHERE " + inputQuery + " ORDER BY updatedAt DESC LIMIT 20 OFFSET " + startIdx).spread((result, metadata) => {
- result.start = startIdx;
- result.end = startIdx + 20;
- resolve(result);
- });
- } catch (err) {
- reject(err);
- }
- });
- };*/
+            // TODO : (DH) 가능하면 raw query 사용하지 않기
+            const result = await Errands.sequelize.query("SELECT errandIdx, errandTitle, errandContent, startStationIdx, arrivalStationIdx," +
+                "date_format(deadlineDt, '%m.%d') AS `deadlineDt`, itemPrice, errandPrice, errandStatus " +
+                "FROM ERRANDS_TB WHERE " + inputQuery + " ORDER BY updatedAt DESC LIMIT 20 OFFSET " + startIdx).spread((result, metadata) => {
+                result.start = startIdx;
+                result.end = startIdx + 20;
+                resolve(result);
+            });
+        } catch (err) {
+            reject(err);
+        }
+    });
+};
 
 /* 6. 관심 지하철역 불러오기 */
 async function loadFavoriteStations(req, res, next) {
