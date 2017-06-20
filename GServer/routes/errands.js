@@ -352,7 +352,7 @@ async function askExecuteErrand(req, res, next) {
         const errandIdx = req.params.errandIdx;
         const result = await askToRequester(userIdx, errandIdx);
         const ret = {errandStatus: result.errandStatus};
-        await fcmAskExecute(errandIdx, userIdx);
+        await fcmAskExecute(errandIdx, userIdx, result.executorIdx);
         resSucc(res, ret);
     } catch (err) {
         next(err);
@@ -360,20 +360,10 @@ async function askExecuteErrand(req, res, next) {
 }
 
 /* 6_1 심부름 수행 FCM */
-const fcmAskExecute = (errandIdx, userIdx) => {
+const fcmAskExecute = (errandIdx, userIdx, targetUserIdx) => {
     return new Promise(async (resolve, reject) => {
         try {
-            const targetResult = await Errands.findById(errandIdx, {attributes: ['requesterIdx', 'executorIdx']});
-            const requesterIdx = targetResult.dataValues.requesterIdx;
-            const executorIdx = targetResult.dataValues.executorIdx;
-            let targetUser = null;
-            if (requesterIdx === userIdx) {
-                targetUser = executorIdx;
-            } else if (executorIdx === userIdx) {
-                targetUser = requesterIdx;
-            }
-
-            const userFcmToken = await getFcmToken(targetUser);
+            const userFcmToken = await getFcmToken(targetUserIdx);
             const errandResult = await Errands.findById(errandIdx, {attributes: ['errandStatus', 'errandTitle', 'errandIdx']});
             const userResult = await Users.findById(userIdx, {attributes: ['userNickname', 'userEmail']});
             const message = {
