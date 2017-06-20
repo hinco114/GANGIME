@@ -609,7 +609,7 @@ const getAllHistories = (userIdx, startIdx, category) => {
         try {
             let inputQuery = null;
             if (category === "execute") { // 수행자
-                inputQuery = "errandStatus IN ('신청진행중', '진행중', '취소완료', '완료요청중', '수행완료') AND executorIdx = " + userIdx;
+                inputQuery = "errandStatus IN ('신청진행중', '진행중', '취소완료', '완료요청중', '심부름완료') AND executorIdx = " + userIdx;
             } else if (category === "request") { // 요청자
                 inputQuery = "errandStatus IN ('입금대기중', '매칭대기중', '진행중', '매칭실패', '취소완료', '완료요청중', '심부름완료') AND requesterIdx = " + userIdx;
             }
