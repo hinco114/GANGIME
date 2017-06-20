@@ -686,10 +686,7 @@ async function askErrandDone(req, res, next) {
 const updateAskErrandDone = (userIdx, errandIdx) => {
     return new Promise(async (resolve, reject) => {
         try {
-            const errand = await Errands.findOne({
-                where: {errandIdx: errandIdx},
-                attributes: ['requesterIdx', 'executorIdx', 'errandStatus']
-            });
+            const errand = await Errands.findById(errandIdx);
             const requesterIdx = errand.dataValues.requesterIdx;
             const executorIdx = errand.dataValues.executorIdx;
             let targetUser = null;
