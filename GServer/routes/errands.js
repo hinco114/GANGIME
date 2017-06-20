@@ -352,7 +352,7 @@ async function askExecuteErrand(req, res, next) {
         const errandIdx = req.params.errandIdx;
         const result = await askToRequester(userIdx, errandIdx);
         const ret = {errandStatus: result.errandStatus};
-        await fcmAskExecute(errandIdx, userIdx, result.executorIdx);
+        await fcmAskExecute(errandIdx, userIdx, result.requesterIdx);
         resSucc(res, ret);
     } catch (err) {
         next(err);
@@ -455,10 +455,10 @@ async function rejectErrandRequest(req, res, next) {
             throw new Error('Time already gone');
         }
 
-        const result = await rejectRequester(errandIdx);
         const userFcmToken = await getFcmToken(errandResult.executorIdx);
+        const result = await rejectRequester(errandIdx);
         const message = {
-            to: userFcmToken.dataValues.fcmToken, // 상대방 유저 토큰
+            to: userFcmToken.fcmToken, // 상대방 유저 토큰
             data: {
                 pushType: '심부름 요청 거절',
                 errandIdx: errandResult.dataValues.errandIdx,
