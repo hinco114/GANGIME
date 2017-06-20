@@ -122,7 +122,7 @@ async function getUserInfo(req, res, next) {
         const userIdx = decode.userIdx;
         let conditions = {
             where: {userIdx: userIdx},
-            attributes: ['userEmail', 'userNickname', 'userBirthday', 'userPhone', 'userDepositor', 'userAccount']
+            attributes: ['userIdx', 'userEmail', 'userNickname', 'userBirthday', 'userPhone', 'userDepositor', 'userAccount']
         };
         const data = await Users.findOne(conditions);
         resSucc(res, data);
