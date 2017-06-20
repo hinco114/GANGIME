@@ -702,7 +702,8 @@ const updateAskErrandDone = (userIdx, errandIdx) => {
                 to: userFcmToken.fcmToken, // 상대방 유저 토큰
                 data: {
                     pushType: '심부름 완료 요청',
-                    errandIdx: errandIdx
+                    errandIdx: errandIdx,
+                    errandTitle: errand.errandTitle
                 }
             };
             sendFcmMessage(message);
