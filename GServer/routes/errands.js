@@ -364,6 +364,7 @@ const fcmAskExecute = (errandIdx, userIdx) => {
     return new Promise(async (resolve, reject) => {
         try {
             const targetResult = await Errands.findById(errandIdx, {attributes: ['requesterIdx', 'executorIdx']});
+            console.log(targetResult);
             const requesterIdx = targetResult.dataValues.requesterIdx;
             const executorIdx = targetResult.dataValues.executorIdx;
             let targetUser = null;
