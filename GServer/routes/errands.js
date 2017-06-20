@@ -364,7 +364,6 @@ const fcmAskExecute = (errandIdx, userIdx) => {
     return new Promise(async (resolve, reject) => {
         try {
             const targetResult = await Errands.findById(errandIdx, {attributes: ['requesterIdx', 'executorIdx']});
-            console.log(targetResult);
             const requesterIdx = targetResult.dataValues.requesterIdx;
             const executorIdx = targetResult.dataValues.executorIdx;
             let targetUser = null;
@@ -543,7 +542,7 @@ const getErrandList = (decode, startIdx, startStation, arrivalStation, order) =>
             let userDoing = {
                 include: [{model: Boxes, attributes: ['boxIdx']}],
                 where: [selectStation, {errandStatus: '진행중'}, {$or: [{requesterIdx: user}, {executorIdx: user}]}],
-                attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx',
+                attributes: ['errandIdx', 'requesterIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx',
                     [Errands.sequelize.fn('date_format', Errands.sequelize.col('deadlineDt'), '%m월 %d일 %H시 %i분'), 'deadlineDt'],
                     'itemPrice', 'errandPrice', 'errandStatus'],
                 order: [['createdAt', 'DESC']]
@@ -558,8 +557,8 @@ const getErrandList = (decode, startIdx, startStation, arrivalStation, order) =>
 
             let byStations = {
                 include: [{model: Boxes, attributes: ['boxIdx']}],
-                where: [selectStation, {errandStatus: '매칭대기중'}],
-                attributes: ['errandIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx',
+                where: [selectStation, {errandStatus: '매칭대기중', $not: {requesterIdx: user}}],
+                attributes: ['errandIdx', 'requesterIdx', 'errandTitle', 'startStationIdx', 'arrivalStationIdx',
                     [Errands.sequelize.fn('date_format', Errands.sequelize.col('deadlineDt'), '%m월 %d일 %H시 %i분'), 'deadlineDt'],
                     'itemPrice', 'errandPrice', 'errandStatus'],
                 order: [[selectOrder, 'DESC']]
@@ -579,9 +578,9 @@ const getErrandList = (decode, startIdx, startStation, arrivalStation, order) =>
                     delete result.dataValues.BOXES_TBs;
                 }
             });
-            result = result.slice(startIdx, startIdx + 15);
+            result = result.slice(startIdx, startIdx + 20);
             result.start = startIdx;
-            result.end = startIdx + 15;
+            result.end = startIdx + 20;
             resolve(result);
         } catch (err) {
             reject(err);
