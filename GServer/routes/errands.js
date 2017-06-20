@@ -282,7 +282,7 @@ const registerCancelContent = (userIdx, errandIdx, reason) => {
 const fcmRequestCancel = (errandIdx, targetUserIdx, userIdx) => {
     return new Promise(async (resolve, reject) => {
         try {
-            const userFcmToken = await getFcmToken(userIdx);
+            const userFcmToken = await getFcmToken(targetUserIdx);
             const errand = await Errands.findById(errandIdx);
             const message = {
                 to: userFcmToken.fcmToken, // 상대방 유저 토큰
@@ -290,7 +290,10 @@ const fcmRequestCancel = (errandIdx, targetUserIdx, userIdx) => {
                     pushType: '심부름 취소 요청',
                     errandIdx: errandIdx,
                     userIdx: userIdx,
-                    errandStatus: errand.errandStatus
+                    errandStatus: errand.errandStatus,
+                    deadlineDt: errand.deadlineDt,
+                    startStationIdx: errand.startStationIdx,
+                    arrivalStationIdx: errand.arrivalStationIdx
                 }
             };
             sendFcmMessage(message);
@@ -348,9 +351,8 @@ async function askExecuteErrand(req, res, next) {
         const userIdx = token.userIdx;
         const errandIdx = req.params.errandIdx;
         const result = await askToRequester(userIdx, errandIdx);
-        if (result[0] === 1) {
-            res.send({msg: 'success'});
-        }
+        const ret = {errandStatus: result.errandStatus};
+        resSucc(res, ret);
         await fcmAskExecute(errandIdx, userIdx);
     } catch (err) {
         next(err);
@@ -381,8 +383,8 @@ const fcmAskExecute = (errandIdx, userIdx) => {
                     errandIdx: errandResult.dataValues.errandIdx,
                     errandStatus: errandResult.dataValues.errandStatus,
                     errandTitle: errandResult.dataValues.errandTitle,
-                    userNickname: errandResult.dataValues.userNickname,
-                    userEmail: errandResult.dataValues.userEmail
+                    userNickname: userResult.dataValues.userNickname,
+                    userEmail: userResult.dataValues.userEmail
                 }
             };
             sendFcmMessage(message);
@@ -401,12 +403,14 @@ const askToRequester = (userIdx, errandIdx) => {
             const endTime = new Date(startTime.getTime() + 10000); // TODO: (DH) 시간 변경하기, 현재는 테스트 시간으로 설정함
             const settings = {start: startTime, end: endTime};
             // await countFiveMinutes(settings, errandIdx);
-
-            const askExecuting = await Errands.update(
-                {errandStatus: '신청진행중', executorIdx: userIdx},
-                {where: {errandIdx: errandIdx}}
-            );
-            resolve(askExecuting);
+            let errand = await Errands.findById(errandIdx);
+            if (errand.errandStatus != '매칭대기중') {
+                reject(new Error('Current status is not 매칭대기중'))
+            }
+            errand.errandStatus = '신청진행중';
+            errand.executorIdx = userIdx;
+            errand.save();
+            resolve(errand);
         } catch (err) {
             reject(err);
         }
@@ -444,7 +448,8 @@ async function acceptErrand(req, res, next) {
         result.errandStatus = '진행중';
         // result.errandChatId = newChat._id.toString();
         result.save();
-        resSucc(res, result);
+        const ret = {errandStatus: result.errandStatus};
+        resSucc(res, ret);
     } catch (err) {
         next(err);
     }
@@ -666,11 +671,12 @@ async function askErrandDone(req, res, next) {
         const errand = await Errands.findById(errandIdx);
         if (!errand) {
             throw new Error('Errand not exist');
+        } else if (errand.errandStatus != '진행중') {
+            throw new Error('Current status is not 진행중')
         }
         const result = await updateAskErrandDone(userIdx, errandIdx);
-        if (result[0] === 1) {
-            res.send({msg: 'success'});
-        }
+        const ret = {errandStatus: result};
+        resSucc(res, ret)
     } catch (err) {
         next(err);
     }
@@ -680,23 +686,30 @@ async function askErrandDone(req, res, next) {
 const updateAskErrandDone = (userIdx, errandIdx) => {
     return new Promise(async (resolve, reject) => {
         try {
-            const userIdentify = await Errands.findOne({
+            const errand = await Errands.findOne({
                 where: {errandIdx: errandIdx},
-                attributes: ['requesterIdx', 'executorIdx']
+                attributes: ['requesterIdx', 'executorIdx', 'errandStatus']
             });
-            const requesterIdx = userIdentify.dataValues.requesterIdx;
-            const executorIdx = userIdentify.dataValues.executorIdx;
+            const requesterIdx = errand.dataValues.requesterIdx;
+            const executorIdx = errand.dataValues.executorIdx;
             let targetUser = null;
             if (requesterIdx === userIdx) {
                 targetUser = executorIdx;
             } else if (executorIdx === userIdx) {
                 targetUser = requesterIdx;
             }
-
-            const result = await Errands.update(
-                {errandStatus: '완료요청중'},
-                {where: {errandIdx: errandIdx}});
-            resolve(result);
+            errand.errandStatus = '완료요청중';
+            errand.save();
+            const userFcmToken = await getFcmToken(targetUser);
+            const message = {
+                to: userFcmToken.fcmToken, // 상대방 유저 토큰
+                data: {
+                    pushType: '심부름 완료 요청',
+                    errandIdx: errandIdx
+                }
+            };
+            sendFcmMessage(message);
+            resolve(errand.errandStatus);
         } catch (err) {
             reject(err);
         }
